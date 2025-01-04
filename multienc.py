@@ -85,7 +85,7 @@ for id in range(2308):
                 ctxs_heads[k][head].ecriture_xslx(crt= crt, 
                                                     ctx= ctxs[k],
                                                     absolute_folder= f"{OUTPUT_PATH}/token_level/{head}", 
-                                                    filename=f"ctx_{k}_head_{head}", 
+                                                    filename=f"ctx_{k}", 
                                                     precision=precision, 
                                                     create_folder_path=True)
             mean_ctxs_heads[k].ecriture_xslx(crt= crt,
@@ -125,3 +125,19 @@ for id in range(2308):
                                             filename=f"head_{h_tl}", 
                                             precision=8,
                                             create_folder_path=True)
+
+
+## OUTPUT
+# OUTPUT_PATH/{id}/
+#  - sentence_level
+#     - sl_heads_{head}.xslx
+#        ...
+#  - token_level
+#     - {head}
+#        - ctx_{k}.xslx
+#           ...
+#  - full_matrice
+#     - sl_{sl_head}
+#        - head_{head}.xslt
+#           ...
+#        ...
