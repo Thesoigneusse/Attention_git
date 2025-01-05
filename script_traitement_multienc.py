@@ -71,10 +71,10 @@ for id in range(2308):
         
         # Contextualisation entre le mécanisme d'attention word-level et le mécanisme d'attention sentence-level
         # Récupération de l'ensemble des phrases de contexte en une seule d'identifiant -1
-        full_ctx = Snt(identifiant=-1, tokens=ctxs[0]) if len(ctxs)>= 1 else None
+        full_ctx = Snt(identifiant=crt.identifiant - len(ctxs), tokens=ctxs[0]) if len(ctxs)>= 1 else None
         if full_ctx is not None:
             for k in range(1, len(ctxs)):
-                full_ctx += ctxs[k]
+                full_ctx.tokens += ctxs[k].tokens
 
         # écriture Token-level K x H x crt x ctxs[k] + means
         for k in range(len(ctxs)):
