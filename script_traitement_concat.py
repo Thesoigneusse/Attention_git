@@ -6,9 +6,9 @@ import Utils_concat
 
 for id in range(2308):
     print(f"[DEBUG] id: {id}")
-    r_path=f"/home/getalp/lopezfab/lig/temp/temp/test_attn/{id}.json"
+    r_path=f"/home/getalp/lopezfab/temp/temp/test_attn/{id}.json"
     data=Utils_data.lecture_data(r_path)
-    _OUTPUT_PATH=f"/home/getalp/lopezfab/Documents/concat/{id}"
+    _OUTPUT_PATH=f"/home/getalp/lopezfab/temp_phd/concat/{id}"
 
     # Traitement des Phrases extraites
     ssl = data['src_segments_labels']
