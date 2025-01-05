@@ -10,8 +10,6 @@ class Matrice():
         if not isinstance(matrice, torch.Tensor):
             matrice = torch.Tensor(matrice)
         self.matrice = matrice
-        self._normalized = False
-        self._suppr_inf = False
 
     @property
     def matrice(self) -> torch.Tensor:
@@ -19,22 +17,6 @@ class Matrice():
     @matrice.setter
     def matrice(self, matrice: torch.Tensor) -> None:
         self._matrice = matrice
-
-    @property
-    def normalized(self) -> bool:
-        return self._normalized
-    @normalized.setter
-    def normalized(self, value: bool) -> None:
-        assert isinstance(value, bool), f"[DEBUG] value doit être un booléen. Current type vs. value: {type(value)} vs. {value} "
-        self._normalized = value
-
-    @property
-    def suppr_inf(self) -> bool:
-        return self._suppr_inf
-    @suppr_inf.setter
-    def suppr_inf(self, value: bool) -> None:
-        assert isinstance(value, bool), f"[DEBUG] value doit être un booléen. Current type vs. value: {type(value)} vs. {value} "
-        self._suppr_inf = value
 
     def __json__(self) -> str:
         return str(self.__dict__)
@@ -220,41 +202,33 @@ class Matrice():
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000]])
         """
 #         print(f"[DEBUG]self.matrice: {self.matrice}")
-        if not self.normalized:
-            for itok in range(self.matrice.size(dim=0)):
-                mask_not_nul = self.matrice[itok] != 0
-                if len(self.matrice[itok]) != 1 \
-                    and not torch.numel(self.matrice[itok][mask_not_nul]) == 0 \
-                    and not torch.all(self.matrice[itok][mask_not_nul] == self.matrice[itok][mask_not_nul][0]):
-                    # Exclu les cas causant un NaN à cause d'une normalisation via le minimum,
-                    # C'est-à-dire le cas d'une valeur unique dans le vecteur
-                    # Ainsi que le cas où toutes les valeurs non nulles sont égales
-                    self.matrice[itok] = Matrice.action_norm_tensor(self.matrice[itok], medium = medium)
-                # import pudb; pudb.set_trace()
+        for itok in range(self.matrice.size(dim=0)):
+            mask_not_nul = self.matrice[itok] != 0
+            if len(self.matrice[itok]) != 1 \
+                and not torch.numel(self.matrice[itok][mask_not_nul]) == 0 \
+                and not torch.all(self.matrice[itok][mask_not_nul] == self.matrice[itok][mask_not_nul][0]):
+                # Exclu les cas causant un NaN à cause d'une normalisation via le minimum,
+                # C'est-à-dire le cas d'une valeur unique dans le vecteur
+                # Ainsi que le cas où toutes les valeurs non nulles sont égales
+                self.matrice[itok] = Matrice.action_norm_tensor(self.matrice[itok], medium = medium)
+            # import pudb; pudb.set_trace()
 
-                # Issue with torch.round() : not accurate enough
-                # print(f"avant : {self.matrice[itok]}")
-                # self.matrice = self.matrice.round(decimals = precision)
-                # print(f"après : {self.matrice[itok]}")
-            self.normalized = True
-        else:
-            print(f"[DEBUG] Matrice déjà normalisée")
+            # Issue with torch.round() : not accurate enough
+            # print(f"avant : {self.matrice[itok]}")
+            # self.matrice = self.matrice.round(decimals = precision)
+            # print(f"après : {self.matrice[itok]}")
 
     # suppr_inf_uniform
     def suppr_inf(self, medium: str= "inf_uniform", value = None):
-        if not self.normalized:
-            size = self.matrice.size()
-            if size[0] > 1 :
-                if medium =="inf_uniform" :
-                    self.matrice[self.matrice < (1/size[1])] = 0
-                elif medium == "inf_uniform_modif":
-                    self.matrice[self.matrice < (1/size[1])] = 1/size[1]
-                elif medium == "value":
-                        assert value is not None and isinstance(value, int), f"avec l'option value, clean_matrice doit recevoir une valeur"
-                        self.matrice[self.matrice < 1/value] = 0
-            self.suppr_inf = True
-        else:
-            print(f"[DEBUG] Valeurs inf déjà supprimées")
+        size = self.matrice.size()
+        if size[0] > 1 :
+            if medium =="inf_uniform" :
+                self.matrice[self.matrice < (1/size[1])] = 0
+            elif medium == "inf_uniform_modif":
+                self.matrice[self.matrice < (1/size[1])] = 1/size[1]
+            elif medium == "value":
+                    assert value is not None and isinstance(value, int), f"avec l'option value, clean_matrice doit recevoir une valeur"
+                    self.matrice[self.matrice < 1/value] = 0
 
     def ecriture_xslx(self, crt: Snt, ctx: Snt, absolute_folder, filename, precision = 2, create_folder_path = False):
         """Écrit la matrice au format xslx

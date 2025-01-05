@@ -1,5 +1,6 @@
 import json
 from typing import List
+import copy
 
 
 class Snt:
@@ -54,7 +55,7 @@ class Snt:
         """
         assert isinstance(tokens, list), f"token must be a list. Current type: {type(tokens)}"
         assert all(isinstance(tok, str) for tok in tokens), f"token must be a list of str. Current type: {[type(tok) for tok in tokens]}"
-        self._tokens = tokens
+        self._tokens = copy.copy(tokens)
 
     @property
     def identifiant(self) -> int:

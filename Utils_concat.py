@@ -1,5 +1,6 @@
 from typing import List
 from copy import deepcopy
+import torch
 from Matrice import Matrice
 from Snt import Snt
 
@@ -35,6 +36,9 @@ def full_sentence_to_ctx_and_crt(_snt: list, eos_token: str = "<eos>"):
 
     Returns:
         list: liste de phrases
+    >>> s1 = Snt(identifiant = 1, tokens= ["t0", "t1", "<eos>", "t2", "t3", "<eos>", "t4", "t5", "<eos>", "t6", "t7", "<END>"])
+    >>> print(full_sentence_to_ctx_and_crt(s1))
+    [['t0', 't1', '<eos>'], ['t2', 't3', '<eos>'], ['t4', 't5', '<eos>'], ['t6', 't7', '<END>']]
     """
     snt = deepcopy(_snt)
     list_sentence = [[]]
@@ -71,12 +75,48 @@ def correctif_src_sentence(src: List[str], src_seg_lab: List[int]) -> None:
 def cut_matrix_into_sentences(_matrice: Matrice, snts: List[str]) -> List[List[Matrice]]:
     """Découpe une Matrice ctx+crt de self-attention en différentes Matrices k3 x k3, k3 x k2, ..., k0 x k0
 
+        k3xk3   k3xk2   k3xk1   k3xk0
+        k2xk3   k2xk2   k2xk1   k2xk0
+        k1xk3   k1xk2   k1xk1   k1xk0
+        k0xk3   k0xk2   k0xk1   k0xk0
+    
+
     Args:
         _matrice (Matrice): Matrice de self-attention ctx+crt x ctx+crt
         snts (List[Snt]): liste de Snt
 
     Returns:
         list: liste de liste de Matrice
+
+    >>> liste_10_x_10 = [[0 , 1, 2, 3, 4, 5, 6, 7, 8, 9], [10,11,12,13,14,15,16,17,18,19], [20,21,22,23,24,25,26,27,28,29], [30,31,32,33,34,35,36,37,38,39], [40,41,42,43,44,45,46,47,48,49], [50,51,52,53,54,55,56,57,58,59], [60,61,62,63,64,65,66,67,68,69], [70,71,72,73,74,75,76,77,78,79], [80,81,82,83,84,85,86,87,88,89], [90,91,92,93,94,95,96,97,98,99]]
+    >>> snts = [Snt(identifiant=0, tokens = ["k3t1", "k3t2"]), Snt(identifiant=1, tokens = ["k2t1", "k2t2", "k2t3"]), Snt(identifiant=2, tokens = ["k1t1", "k1t2"]), Snt(identifiant=3, tokens = ["k0t1", "k0t2", "k0t3"])]
+    >>> m1 = Matrice(torch.Tensor(liste_10_x_10))
+    >>> print(cut_matrix_into_sentences(m1, snts))
+    [[{'_matrice': tensor([[ 0.,  1.],
+            [10., 11.]])}, {'_matrice': tensor([[ 2.,  3.,  4.],
+            [12., 13., 14.]])}, {'_matrice': tensor([[ 5.,  6.],
+            [15., 16.]])}, {'_matrice': tensor([[ 7.,  8.,  9.],
+            [17., 18., 19.]])}], [{'_matrice': tensor([[20., 21.],
+            [30., 31.],
+            [40., 41.]])}, {'_matrice': tensor([[22., 23., 24.],
+            [32., 33., 34.],
+            [42., 43., 44.]])}, {'_matrice': tensor([[25., 26.],
+            [35., 36.],
+            [45., 46.]])}, {'_matrice': tensor([[27., 28., 29.],
+            [37., 38., 39.],
+            [47., 48., 49.]])}], [{'_matrice': tensor([[50., 51.],
+            [60., 61.]])}, {'_matrice': tensor([[52., 53., 54.],
+            [62., 63., 64.]])}, {'_matrice': tensor([[55., 56.],
+            [65., 66.]])}, {'_matrice': tensor([[57., 58., 59.],
+            [67., 68., 69.]])}], [{'_matrice': tensor([[70., 71.],
+            [80., 81.],
+            [90., 91.]])}, {'_matrice': tensor([[72., 73., 74.],
+            [82., 83., 84.],
+            [92., 93., 94.]])}, {'_matrice': tensor([[75., 76.],
+            [85., 86.],
+            [95., 96.]])}, {'_matrice': tensor([[77., 78., 79.],
+            [87., 88., 89.],
+            [97., 98., 99.]])}]]
     """
     assert _matrice.matrice.size(dim=0) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim0 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
     assert _matrice.matrice.size(dim=1) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim1 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
@@ -93,16 +133,18 @@ def cut_matrix_into_sentences(_matrice: Matrice, snts: List[str]) -> List[List[M
         for j in range(len(snts)):
             fin_col += len(snts[j])
             # On ajoute les éléments de la matrice dans la liste temporaire
-            temp.insert(0, {
-                "crt": deepcopy(snts[i]),
-                "ctx": deepcopy(snts[j]),
-                "matrix": Matrice(deepcopy(_matrice.matrice[
+            temp.append(Matrice(_matrice.matrice[
                     debut_row:fin_row,
                     debut_col:fin_col
                 ]))
-            })
             debut_col = fin_col
-        matrices.insert(0, deepcopy(temp))
+        matrices.append( deepcopy(temp))
         debut_row = fin_row
     return matrices
 
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+    print(f"[DEBUG] Doctest clear")
