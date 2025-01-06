@@ -10,7 +10,7 @@ _FULL_SNT = False # permet prendre en compte la phrase courante ou non
 _ON_SERV = True
 
 _PATH = f"/home/getalp/lopezfab" if _ON_SERV else f"/home/getalp/lopezfab/lig"
-for id in range(2308):
+for id in range(187, 2308):
     print(f"[DEBUG] id: {id}")
     r_path=f"{_PATH}/temp/temp/test_attn/{id}.json"
     data=Utils_data.lecture_data(r_path)
