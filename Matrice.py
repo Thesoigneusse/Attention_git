@@ -37,7 +37,7 @@ class Matrice():
         tensor([[ 1.,  2.,  3.,  4.,  5.,  6.],
                 [25., 26., 27., 28., 29., 30.],
                 [37., 38., 39., 40., 41., 42.],
-                [43., 44., 45., 46., 47., 48.]])
+                [43., 44., 45., 46., 47., 48.]], dtype=torch.float64)
         """
         assert isinstance(row_list_suppr_pad, list), f"row_list_suppr_pad doit être une liste. Current type: {type(row_list_suppr_pad)}"
         assert all(isinstance(index, int) for index in row_list_suppr_pad), f"row_list_suppr_pad doit être une liste d'entier. Current type: {[type(index) for index in row_list_suppr_pad]}"
@@ -60,7 +60,7 @@ class Matrice():
         tensor([[ 1.,  5.],
                 [25., 29.],
                 [37., 41.],
-                [43., 47.]])
+                [43., 47.]], dtype=torch.float64)
         """
         if row_list_suppr_pad is not None:
             assert isinstance(row_list_suppr_pad, list), f"row_list_suppr_pad doit être une liste. Current type: {type(row_list_suppr_pad)}"
@@ -150,7 +150,7 @@ class Matrice():
 
         Exemples:
         >>> Matrice.action_norm_tensor(torch.DoubleTensor([0,2,3,4,5,6]), medium = "minmax")
-        tensor([0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000])
+        tensor([0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000], dtype=torch.float64)
         """
         if medium =="minmax":
             return ant.norm_by_min_max(row)
@@ -177,36 +177,36 @@ class Matrice():
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
-                [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000]])
+                [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000]], dtype=torch.float64)
         >>> m2 = Matrice(torch.DoubleTensor([[1,2,3,4,5,6], [7,8,9,10,11,12], [13,14,15,16,17,18], [19,20,21,22,23,24], [25,26,27,28,29,30], [31,32,33,34,35,36], [37,38,39,40,41,42], [43,44,45,46,47,48]]))
         >>> m2.norm_tensor(precision=2, medium='max')
         >>> print(m2.matrice)
-        tensor([[0.1700, 0.3300, 0.5000, 0.6700, 0.8300, 1.0000],
-                [0.5800, 0.6700, 0.7500, 0.8300, 0.9200, 1.0000],
-                [0.7200, 0.7800, 0.8300, 0.8900, 0.9400, 1.0000],
-                [0.7900, 0.8300, 0.8800, 0.9200, 0.9600, 1.0000],
-                [0.8300, 0.8700, 0.9000, 0.9300, 0.9700, 1.0000],
-                [0.8600, 0.8900, 0.9200, 0.9400, 0.9700, 1.0000],
-                [0.8800, 0.9000, 0.9300, 0.9500, 0.9800, 1.0000],
-                [0.9000, 0.9200, 0.9400, 0.9600, 0.9800, 1.0000]])
-        >>> m3 = Matrice(torch.DoubleTensor([[0,2,3,4,5,6], [7,8,9,0,11,12], [13,14,15,16,17,18], [19,20,0,0,23,24], [25,26,27,28,29,30], [31,32,33,34,35,36], [37,38,39,40,41,42], [43,44,45,46,47,48]]))
+        tensor([[0.1667, 0.3333, 0.5000, 0.6667, 0.8333, 1.0000],
+                [0.5833, 0.6667, 0.7500, 0.8333, 0.9167, 1.0000],
+                [0.7222, 0.7778, 0.8333, 0.8889, 0.9444, 1.0000],
+                [0.7917, 0.8333, 0.8750, 0.9167, 0.9583, 1.0000],
+                [0.8333, 0.8667, 0.9000, 0.9333, 0.9667, 1.0000],
+                [0.8611, 0.8889, 0.9167, 0.9444, 0.9722, 1.0000],
+                [0.8810, 0.9048, 0.9286, 0.9524, 0.9762, 1.0000],
+                [0.8958, 0.9167, 0.9375, 0.9583, 0.9792, 1.0000]], dtype=torch.float64)
+        >>> m3 = Matrice(torch.DoubleTensor([[0,2,3,4,5,6], [7,8,9,0,11,12], [0,0,0,0,0,18], [19,20,0,0,23,24], [25,26,27,28,29,30], [31,32,33,34,35,36], [37,38,39,40,41,42], [43,44,45,46,47,48]]))
         >>> m3.norm_tensor(precision=2, medium='minmax')
         >>> print(m3.matrice)
         tensor([[0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.0000, 0.8000, 1.0000],
-                [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
+                [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 1.0000],
                 [0.0000, 0.2000, 0.0000, 0.0000, 0.8000, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
                 [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000],
-                [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000]])
+                [0.0000, 0.2000, 0.4000, 0.6000, 0.8000, 1.0000]], dtype=torch.float64)
         """
 #         print(f"[DEBUG]self.matrice: {self.matrice}")
         for itok in range(self.matrice.size(dim=0)):
             mask_not_nul = self.matrice[itok] != 0
             if len(self.matrice[itok]) != 1 \
-                and not torch.numel(self.matrice[itok][mask_not_nul]) == 0 \
-                and not torch.all(self.matrice[itok][mask_not_nul] == self.matrice[itok][mask_not_nul][0]):
+                and not torch.numel(self.matrice[itok][mask_not_nul]) == 0 : #\
+                # and not torch.all(self.matrice[itok][mask_not_nul] == self.matrice[itok][mask_not_nul][0]):
                 # Exclu les cas causant un NaN à cause d'une normalisation via le minimum,
                 # C'est-à-dire le cas d'une valeur unique dans le vecteur
                 # Ainsi que le cas où toutes les valeurs non nulles sont égales

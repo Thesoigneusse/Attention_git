@@ -5,17 +5,35 @@ def norm_by_max(row: torch.Tensor) -> torch.Tensor:
     return row/torch.max(row)
 
 def norm_by_min_max(row: torch.Tensor) -> torch.Tensor:
+    """Normalise en fonction du min et du max de la ligne norm
+
+    Args:
+        row (torch.Tensor): ligne à normaliser
+
+    Returns:
+        torch.Tensor: ligne normalisée
+
+    >>> print(norm_by_min_max(torch.Tensor([0,1,2,3,4,5])))
+    tensor([0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000])
+    >>> print(norm_by_min_max(torch.Tensor([0,0,0,0,0,5])))
+    tensor([0., 0., 0., 0., 0., 1.])
+    """
     assert isinstance(row, torch.Tensor), f"row must be a torch.Tensor. Current type: {type(row)}"
 
 
     min = torch.min(row[row != 0]) # Permet d'éviter de prendre en compte les 0 de paddings
     max = torch.max(row) - min
+    if max == 0.0:
+        # print(f"[DEBUG] cas particulier")
+        # Dans le cas où il n'y a qu'un seul élément dans la matrice on retourne la ligne avec l'élément = à 1
+        return torch.where(row > 0, (row) / (min), torch.tensor(0.0, dtype=row.dtype))
     return torch.where(row > 0, (row - min) / (max), torch.tensor(0.0, dtype=row.dtype))
 
 if __name__ == '__main__':
     import torch
     import doctest
     doctest.testmod()
+    print(f"[DEBUG] all test clear")
     matrice = torch.stack([torch.Tensor([0.0000, 0.0202, 0.0221, 0.0284, 0.0046, 0.0128, 0.0266, 0.0312, 0.0122,
         0.0158, 0.0116, 0.0264, 0.0143, 0.0183, 0.0209, 0.0393, 0.0396, 0.0446,
         0.0393, 0.0187, 0.0350, 0.0371, 0.0091, 0.0236, 0.0251, 0.0371, 0.0449,
@@ -96,6 +114,10 @@ if __name__ == '__main__':
         0.0326, 0.0275, 0.0285, 0.0310, 0.0257, 0.0294, 0.0286, 0.0341, 0.0313,
         0.0308, 0.0318, 0.0376, 0.0330, 0.0407, 0.0355, 0.0408])])
     
-    for irow in matrice:
-        print(norm_by_min_max(irow))
+    m1 = torch.Tensor([0,1,2,3,4,5])
+    m2 = torch.Tensor([0,0,0,0,0,5])
+    print(norm_by_min_max(m1))
+    print(norm_by_min_max(m2))
+    # for irow in matrice:
+    #     print(norm_by_min_max(irow))
         
