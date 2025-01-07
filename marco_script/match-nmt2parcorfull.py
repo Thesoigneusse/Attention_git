@@ -21,6 +21,7 @@ _CORPUS_SYSTEM_COMPARISON_LOG = False
 _MENTION_LOG = False
 _DEBUG_LOG = False
 _DEBUG_WER = False
+ctx_needed_and_hard_coref_concat_ids = True # Permet de se restreindre à un subset de test
 
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
 parser.add_argument('corpus_source', help='source language corpus data')
@@ -1065,7 +1066,10 @@ def main(args):
 
     from subset_ids import dimitra_ids, ctx_needed_concat_ids, ctx_needed_and_hard_coref_concat_ids, pos_att_concat_ids
     #subset_ids=dimitra_ids # NOTE: modify the value of this to constrain the sentence ID set (e.g. dimitra_ids corresponds to the subset identified by Dimitra Niaouri, M2 internship in 2022; see TAL 2024 journal paper).
-    subset_ids=None
+    if _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS:
+        subset_ids=ctx_needed_and_hard_coref_concat_ids
+    else:
+        subset_ids=None
 
     ctx_size = 3
     src = read_txt(args.corpus_source)
