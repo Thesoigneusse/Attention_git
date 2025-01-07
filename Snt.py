@@ -106,8 +106,12 @@ class Snt:
         >>> Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="padding", strict=True)
         []
         """
-        stop = 0 if not strict else -1
-        return [ i for i in range(len(tokens) -1, stop, -1) if tokens[i] == padding_mark ]
+        stop = -1 if strict else 0
+        list_suppr_pad = []
+        for i in range(len(tokens)-1, stop, -1):
+            if tokens[i] == padding_mark:
+                list_suppr_pad.append(i)
+        return list_suppr_pad
 
     def suppr_pad(self, list_index: List[int] = None, padding_mark='<pad>', strict=False) -> List[int]:
         """Supprime le padding de la phrase et retourne une liste contenant les index supprimés
@@ -123,8 +127,12 @@ class Snt:
         >>> s1 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
         >>> list_index = Snt.list_suppr_pad(s1.tokens, padding_mark="<pad>", strict=False)
         >>> s1.suppr_pad(list_index)
+        [6, 2, 1]
+        >>> s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        >>> s2.suppr_pad(strict=True)
+        [6, 2, 1, 0]
         """
-        list_index = Snt.list_suppr_pad(self.tokens, padding_mark=padding_mark) if list_index is None else list_index
+        list_index = Snt.list_suppr_pad(self.tokens, padding_mark=padding_mark, strict=strict) if list_index is None else list_index
 
         for i in list_index:
             del self.tokens[i]
@@ -137,11 +145,11 @@ class Snt:
         Returns:
             List[int]: liste décroissante des tokens contenant une marque de BPE à la fin
         >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-        [6, 5, 1, 0]
+        [[6, 5], [1, 0]]
         >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
-        [3, 2, 1, 0]
+        [[3, 2, 1, 0]]
         >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
-        []
+        None
         """
         assert isinstance(tokens, list), f"tokens must be a list. Current type: {type(tokens)}"
         assert all(isinstance(tok, str) for tok in tokens), f"tokens must be a list of str. Current type: {[type(tok) for tok in tokens]}"
@@ -174,6 +182,7 @@ class Snt:
         Example:
         >>> snt3 = Snt(2, tokens=["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
         >>> snt3.fusion_bpe()
+        [[3, 2, 1, 0]]
         >>> print(snt3)
         Snt(id=2, tokens=['lubulule', '.', '<eos>'])
         """
@@ -196,9 +205,14 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod()
     print()
-    s1 = Snt(2, tokens=["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
-    liste = Snt.list_fusion_bpe(s1.tokens)
-    s1.fusion_bpe(liste)
-    print(s1.tokens)
+
+    print(Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="<pad>", strict=True))
+
+    s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+    print(s2.suppr_pad(strict=True))
+    # s1 = Snt(2, tokens=["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
+    # liste = Snt.list_fusion_bpe(s1.tokens)
+    # s1.fusion_bpe(liste)
+    # print(s1.tokens)
 
 
