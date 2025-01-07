@@ -930,7 +930,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
         res = res.replace('   ', ' ')
 
         return res.strip()
-
+    import pdb; pdb.set_trace()
     c2s_wer = [0] * 4
 
     offset = 0
