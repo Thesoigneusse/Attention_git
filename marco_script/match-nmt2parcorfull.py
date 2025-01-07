@@ -21,7 +21,7 @@ _CORPUS_SYSTEM_COMPARISON_LOG = False
 _MENTION_LOG = False
 _DEBUG_LOG = False
 _DEBUG_WER = False
-_CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
+_CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = True # Permet de se restreindre à un subset de test
 
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
 parser.add_argument('corpus_source', help='source language corpus data')
