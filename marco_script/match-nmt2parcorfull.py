@@ -593,7 +593,7 @@ def match_nmt2parcorfull(src_nmt, disco_src_pcf, news_src_pcf):
                 sys.stdout.flush()
 
         matched_data.append( matched_struct )
-
+    print("[DEBUG] matched_data: {}".format(matched_data))
     return matched_data
 
 def read_system_src_data(src_list, seq_ids=None):
