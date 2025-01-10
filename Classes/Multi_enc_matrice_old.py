@@ -1,32 +1,37 @@
-import Snt
-from CA_matrice import CA_matrice
-from Matrice import Matrice
-from Sl_matrice import Sl_matrice
+import Classes.Snt as Snt
+from Classes.Matrice import Matrice
+from Classes.Sl_matrice import Sl_matrice
 import Utils
 import Utils_data
 from typing import List
-# N : taille de la phrase courante
-# k : nombre de phrase de contexte
-# M_i : Taille de la ième phrase de contexte 
-# M : Taille de la fusion des phrases de contexte
-# nb_heads : nombre de tête d'attention
-# L : nombre de layers
 
-class Multi_enc_matrice(CA_matrice):
+
+class Multi_enc_matrice():
     def __init__(self, crt: Snt.Snt, ctxs: List[Snt.Snt], ctxs_heads: List[Matrice], sl_heads: List[Sl_matrice]) -> None:
-        super().__init__(crt=crt, ctxs=ctxs)
-
-        # Variable correspondant aux têtes du mécanisme d'attention sentence_level
-        # Dimension : nb_heads x N x k
-        self._sl_heads = sl_heads
-        
-        # Variable correspondant aux têtes du mécanisme d'attention token-level
-        # Dimension : k x nb_head x N x M_i
+        self._crt = crt
+        self._ctxs = ctxs
         self._ctxs_heads = ctxs_heads
+        self._sl_heads = sl_heads
+
+    @property
+    def crt(self) -> Snt.Snt:
+        return self._crt
+    @crt.setter
+    def crt(self, value: Snt.Snt) -> None:
+        assert isinstance(value, Snt.Snt), f"Sentence must be a Snt.Snt. Current Value: {type(value)}"
+        self._crt = value
+
+    @property
+    def ctxs(self) -> List[Snt.Snt]:
+        return self._ctxs
+    @ctxs.setter
+    def ctxs(self, value: List[Snt.Snt]) -> None:
+        assert isinstance(value, list), f"ctxs must be a list. Current Value: {type(value)}"
+        assert all(isinstance(snt, Snt.Snt) for snt in value), f"ctxs must be a list of Snt.Snt. Current Value: {[type(snt) for snt in value]}"
+        self._ctxs = value
 
     @property
     def ctxs_heads(self) -> List[List[Matrice]]:
-        # Dimension : k x nb_head x N x M
         return self._ctxs_heads
     @ctxs_heads.setter
     def ctxs_heads(self, value: List[List[Matrice]]) -> None:
@@ -37,7 +42,6 @@ class Multi_enc_matrice(CA_matrice):
 
     @property
     def sl_heads(self) -> List[Sl_matrice]:
-        # Dimension : nb_heads x N x k
         return self._sl_heads
     @sl_heads.setter
     def sl_heads(self, value: List[Sl_matrice]) -> None:
@@ -45,11 +49,14 @@ class Multi_enc_matrice(CA_matrice):
         assert all(isinstance(sl_matrice, Sl_matrice) for sl_matrice in value), f"sl_heads must be a list of Sl_matrice. Current Value: {[type(sl_matrice) for sl_matrice in value]}"
         self._sl_heads = value
 
-    def suppr_pad(self, padding_mark='<pad>'):
+    def suppr_pad(self):
         """Suppression des tokens de padding dans les matrices de chaque contexte.
         """
         # On récupère les positions des tokens de paddings dans la phrase source et de contexte
-        list_crt_suppr_pad, list_ctx_suppr_pad = self.sentences_suppr_pad(padding_mark=padding_mark)
+        list_crt_suppr_pad = self.crt.suppr_pad()
+        list_ctx_suppr_pad = []
+        for k in range(len(self.ctxs)):
+            list_ctx_suppr_pad.append(self.ctxs[k].suppr_pad())
 
         # On supprime les poids correspondant aux tokens de padding dans les têtes token-level
         for k in range(len(self.ctxs)):
@@ -60,10 +67,13 @@ class Multi_enc_matrice(CA_matrice):
         for sl_head in range(len(self.sl_heads)):
             self.sl_heads[sl_head].suppr_pad(row_list_suppr_pad= list_crt_suppr_pad)
 
-    def fusion_bpe(self, BPE_mark: str = '@@'):
+    def fusion_bpe(self):
         """Fusion des tokens BPE dans les matrices de chaque contexte.
         """
-        list_crt_fusion_bpe, list_ctx_fusion_bpe = self.sentences_fusion_bpe(BPE_mark=BPE_mark)
+        list_crt_fusion_bpe = self.crt.fusion_bpe()
+        list_ctx_fusion_bpe = []
+        for k in range(len(self.ctxs)):
+            list_ctx_fusion_bpe.append(self.ctxs[k].fusion_bpe())
 
         # On fusionne les poids correspondant aux BPEs dans les têtes token-level
         for k in range(len(self.ctxs)):
@@ -73,6 +83,7 @@ class Multi_enc_matrice(CA_matrice):
         # On fusionne les poids correspondant aux BPEs dans les têtes sentence-level
         for sl_head in range(len(self.sl_heads)):
             self.sl_heads[sl_head].fusion_bpe(row_list_fusion_bpe= list_crt_fusion_bpe)
+
 
     def clean_matrice(self):
         for k in range(len(self.ctxs)):
@@ -89,7 +100,7 @@ class Multi_enc_matrice(CA_matrice):
         return mean_ctxs_heads
 
     def mean_sl_heads(self) -> Sl_matrice:
-        return Sl_matrice(Utils.mean_matrices([self.sl_heads[sl_head].matrice for sl_head in range(len(self.sl_heads))]))
+        mean_sl_heads = Sl_matrice(Utils.mean_matrices([self.sl_heads[sl_head].matrice for sl_head in range(len(self.sl_heads))]))
 
     def ecriture_xslx(self, absolute_folder, filename= None, precision: int = 2, create_folder_path= False):
         """Ecriture des matrices dans un fichier Excel.

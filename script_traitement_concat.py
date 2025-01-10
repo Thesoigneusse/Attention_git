@@ -1,6 +1,6 @@
 import torch
-from Snt import Snt
-from Matrice import Matrice
+from Classes.Snt import Snt
+from Classes.Matrice import Matrice
 import Utils_data
 import Utils_concat
 import importlib

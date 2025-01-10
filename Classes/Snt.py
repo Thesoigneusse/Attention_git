@@ -4,7 +4,7 @@ import copy
 
 
 class Snt:
-    def __init__(self, identifiant: int, tokens: List[str]):
+    def __init__(self, identifiant: int = None, tokens: List[str] = None):
         """Représente une phase.
 
         Args:
@@ -37,6 +37,15 @@ class Snt:
         assert isinstance(other, Snt), f"other must be an instance of Snt. Current type: {type(other)}"
         return Snt(identifiant=-1, tokens=self.tokens + other.tokens)
 
+    def __mul__(self, other):
+        assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
+        if isinstance(other, int) and other > 0:
+            from copy import copy
+            res = []
+            for i in range(other):
+                res.append(copy(self))
+            return res
+
     @property
     def tokens(self) -> List[str]:
         """Getter of tokens variable
@@ -53,8 +62,9 @@ class Snt:
         Args:
             value (List[str]): list of token of the sentence
         """
-        assert isinstance(tokens, list), f"token must be a list. Current type: {type(tokens)}"
-        assert all(isinstance(tok, str) for tok in tokens), f"token must be a list of str. Current type: {[type(tok) for tok in tokens]}"
+        if not isinstance(tokens, type(None)):
+            assert isinstance(tokens, list), f"token must be a list. Current type: {type(tokens)}"
+            assert all(isinstance(tok, str) for tok in tokens), f"token must be a list of str. Current type: {[type(tok) for tok in tokens]}"
         self._tokens = copy.copy(tokens)
 
     @property
@@ -74,8 +84,8 @@ class Snt:
         Args:
             identifiant (int): unique identifiant of the sentence (>=0 or ==-1).
         """
-        assert isinstance(identifiant, int), \
-            f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
+        if not isinstance(identifiant, type(None)):
+            assert isinstance(identifiant, int), f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
         self._identifiant = identifiant
 
     def toJSON(self):
@@ -198,7 +208,10 @@ class Snt:
 
         return groupes_bpe
     
-
+    def test_(self, _id = 0):
+        print(f"[DEBUG] Production d'une Snt de Test")
+        self.identifiant = _id
+        self.tokens = [f"{_id}", "Pro", "Duc", "tion", "d'", "une", "Snt", "de", "test", "."]
 
 
 if __name__ == "__main__":

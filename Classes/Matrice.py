@@ -2,12 +2,15 @@ import torch
 from typing import List
 from typing import Callable
 import action_norm_tensor as ant
-from Snt import Snt
 import action_fusion_bpe as afb
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Classes.Snt import Snt
+
 
 class Matrice():
-    def __init__(self, matrice: torch.Tensor) -> None:
-        if not isinstance(matrice, torch.Tensor):
+    def __init__(self, matrice: torch.Tensor = None) -> None:
+        if isinstance(matrice, list):
             matrice = torch.Tensor(matrice)
         self.matrice = matrice
 
@@ -16,6 +19,7 @@ class Matrice():
         return self._matrice
     @matrice.setter
     def matrice(self, matrice: torch.Tensor) -> None:
+        assert isinstance(matrice, torch.Tensor) or isinstance(matrice, type(None)), f"matrice must be a torch.Tensor or None. Current type: {type(matrice)}"
         self._matrice = matrice
 
     def __json__(self) -> str:
@@ -23,6 +27,15 @@ class Matrice():
 
     def __repr__(self) -> str:
         return self.__json__()
+
+    def __mul__(self, other):
+        assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
+        if isinstance(other, int) and other > 0:
+            from copy import copy
+            res = []
+            for i in range(other):
+                res.append(copy(self))
+            return res
 
     # Padding Suppression
     @staticmethod
@@ -230,7 +243,7 @@ class Matrice():
                     assert value is not None and isinstance(value, int), f"avec l'option value, clean_matrice doit recevoir une valeur"
                     self.matrice[self.matrice < 1/value] = 0
 
-    def ecriture_xslx(self, crt: Snt, ctx: Snt, absolute_folder, filename, precision = 2, create_folder_path = False):
+    def ecriture_xslx(self, crt: "Snt", ctx: "Snt", absolute_folder, filename, precision = 2, create_folder_path = False):
         """Écrit la matrice au format xslx
 
         Args:
@@ -247,7 +260,7 @@ class Matrice():
         pour ne garder que les deniers chiffres significatifs voulus.
         """
         # Check the path
-        import Utils_data
+        from Utils import Utils_data
         Utils_data.check_path(absolute_folder=absolute_folder, create_folder_path=create_folder_path)
         import xlsxwriter
         workbook = xlsxwriter.Workbook(f"{absolute_folder}/{filename}.xlsx")
@@ -275,7 +288,14 @@ class Matrice():
                     worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
         workbook.close()
 
+    def test_(self, size = [10,10]):
+        """Produit une matrice carrée de taille 10x10
 
+        Returns:
+            torch.DoubleTensor: un tensor de taille 10x10 arrondi à 2 décimales
+        """
+        print(f"[DEBUG] Production d'une Matrice de Test")
+        self.matrice = torch.zeros(*size).random_(0, 10).round(decimals = 2)
 
 
 if __name__ == '__main__':

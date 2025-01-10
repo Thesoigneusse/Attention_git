@@ -1,9 +1,9 @@
 import Utils_data as ud
 import Utils
 import torch
-import Matrice
-import Sl_matrice
-from Snt import Snt
+import Classes.Matrice as Matrice
+import Classes.Sl_matrice as Sl_matrice
+from Classes.Snt import Snt
 
 precision = 8
 _TOKEN_LEVEL = True

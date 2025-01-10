@@ -1,6 +1,6 @@
-from Matrice import Matrice
-from CA_matrice import CA_matrice
-from Snt import Snt
+from Classes.Matrice import Matrice
+from Classes.CA_matrice import CA_matrice
+from Classes.Snt import Snt
 from typing import List
 # N : taille de la phrase courante
 # k : nombre de phrase de contexte
