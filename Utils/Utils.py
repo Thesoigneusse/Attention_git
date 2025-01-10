@@ -1,7 +1,5 @@
-import json
 import torch
 from typing import List
-import copy
 
 
 def regrouper_indices_consecutifs(indices: List[int]) -> List[List[int]]:

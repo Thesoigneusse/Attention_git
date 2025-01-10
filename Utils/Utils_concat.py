@@ -1,8 +1,8 @@
 from typing import List
 from copy import deepcopy
-import torch
-from Classes.Matrice import Matrice
-from Classes.Snt import Snt
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Classes.Matrice import Matrice
 
 def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str = "<eos>") -> list:
     """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase
