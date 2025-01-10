@@ -22,6 +22,7 @@ _MENTION_LOG = False
 _DEBUG_LOG = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = True # Permet de se restreindre à un subset de test
+_DATAPATH="./marco_script/data"
 
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
 parser.add_argument('corpus_source', help='source language corpus data')
@@ -235,7 +236,7 @@ def read_discomt_data():
         'words_in_coref' (map from uniq word ID to entity ID to indentify words that actually appears in coreferent mentions, see below).
     """
 
-    datapath = '/home/getalp/dinarelm/work/data/ParCorFull2/parcor-full/corpus/DiscoMT/'
+    datapath = f'{_DATAPATH}/ParCorFull2/parcor-full/corpus/DiscoMT/'
     src_data_path = datapath + 'EN/'
     tgt_data_path = datapath + 'DE/'
     prefixes = ['000_1756', '001_1819', '002_1825', '003_1894', '005_1938', '006_1950', '007_1953', '009_2043', '010_205', '011_2053']
@@ -356,7 +357,7 @@ def read_news_data():
     Why 2 functions doing the same thing ? I don't know... file ID format is different, but still ...
     """
 
-    datapath = '/home/getalp/dinarelm/work/data/ParCorFull2/parcor-full/corpus/news/'
+    datapath = f'{_DATAPATH}/ParCorFull2/parcor-full/corpus/news/'
     src_datapath = datapath + 'EN/'
     tgt_datapath = datapath + 'DE/'
     prefixes = ['03', '04', '05', '07', '08', '09', '10', '13', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25']
