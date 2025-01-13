@@ -37,6 +37,9 @@ class Matrice():
                 res.append(copy(self))
             return res
 
+    def size(self, dim = None):
+        return self.matrice.size(dim=dim)
+
     # Padding Suppression
     @staticmethod
     def row_suppr_pad(matrice, row_list_suppr_pad: List[int]) -> torch.Tensor:
