@@ -2,6 +2,7 @@ from typing import List
 from copy import deepcopy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from Classes.Snt import Snt
     from Classes.Matrice import Matrice
 
 def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str = "<eos>") -> list:
@@ -72,7 +73,7 @@ def correctif_src_sentence(src: List[str], src_seg_lab: List[int]) -> None:
     return src 
 
 
-def cut_matrix_into_sentences(_matrice: Matrice, snts: List[str]) -> List[List[Matrice]]:
+def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List['Matrice']]:
     """Découpe une Matrice ctx+crt de self-attention en différentes Matrices k3 x k3, k3 x k2, ..., k0 x k0
 
         k3xk3   k3xk2   k3xk1   k3xk0
@@ -118,6 +119,8 @@ def cut_matrix_into_sentences(_matrice: Matrice, snts: List[str]) -> List[List[M
             [87., 88., 89.],
             [97., 98., 99.]])}]]
     """
+    from Classes.Matrice import Matrice
+
     assert _matrice.matrice.size(dim=0) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim0 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
     assert _matrice.matrice.size(dim=1) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim1 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
 

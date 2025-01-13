@@ -1,8 +1,8 @@
 import torch
 from typing import List
 from typing import Callable
-import action_norm_tensor as ant
-import action_fusion_bpe as afb
+import Utils.action_norm_tensor as ant
+import Utils.action_fusion_bpe as afb
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
