@@ -38,6 +38,16 @@ class Matrice():
             return res
 
     def size(self, dim = None):
+        """Retourne la size du self.matrice. 
+        Si dim n'est pas spécifier, retourne un torch.Size sinon retourne un int correspondant à la taille de la dimension
+
+        Args:
+            dim (int, optional): La dimension pour laquelle on cherche la taille. Defaults to None.
+
+        Returns:
+            tuple or int: Si dim n'est pas spécifier, retourne un torch.Size sinon retourne un int correspondant à la taille de la dimension
+        """
+        assert dim is None or isinstance(dim, int), f"Si dim est spécifier alors il doit s'agir d'un int. Current type: {type(dim)}"
         return self.matrice.size(dim=dim)
 
     # Padding Suppression
