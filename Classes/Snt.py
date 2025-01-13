@@ -87,6 +87,12 @@ class Snt:
             assert isinstance(identifiant, int), f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
         self._identifiant = identifiant
 
+    def append(self, value: str):
+        assert isinstance(value, str) or (isinstance(value, list) and all([isinstance(val, str) for val in value])), f"[DEBUG] Snt().append only supports strings and List[string]. Current type : {type(value)}"
+        if isinstance(value, str):
+            self.tokens.append(value)
+        elif isinstance(value, List):
+            self.tokens += value
     def toJSON(self):
         import json
         return json.dumps(
