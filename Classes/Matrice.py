@@ -1,8 +1,6 @@
 import torch
 from typing import List
 from typing import Callable
-import Utils.action_norm_tensor as ant
-import Utils.action_fusion_bpe as afb
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
@@ -49,6 +47,11 @@ class Matrice():
         """
         assert dim is None or isinstance(dim, int), f"Si dim est spécifier alors il doit s'agir d'un int. Current type: {type(dim)}"
         return self.matrice.size(dim=dim)
+
+    def copy(self):
+        from copy import copy
+        return copy(self)
+
 
     # Padding Suppression
     @staticmethod
@@ -112,6 +115,7 @@ class Matrice():
             torch.Tensor: Résultat de l'action appliquée à toutes les lignes
         TODO: faire un doctest
         """
+        import Utils.action_fusion_bpe as afb
         result = None
         if action == "max":
             result = afb.max(rows)
@@ -178,12 +182,16 @@ class Matrice():
         >>> Matrice.action_norm_tensor(torch.DoubleTensor([0,2,3,4,5,6]), medium = "minmax")
         tensor([0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000], dtype=torch.float64)
         """
-        if medium =="minmax":
-            return ant.norm_by_min_max(row)
-        elif medium == "max":
-            return ant.norm_by_max(row)
-        else:
-            raise ValueError(f"medium doit être 'minmax' ou'max'. Current value: {medium}")
+        import Utils.action_norm_tensor as ant
+        action = {"minmax": ant.norm_by_min_max,
+                    "max": ant.norm_by_max}
+        return action[medium](row)
+        # if medium =="minmax":
+        #     return ant.norm_by_min_max(row)
+        # elif medium == "max":
+        #     return ant.norm_by_max(row)
+        # else:
+        #     raise ValueError(f"medium doit être 'minmax' ou'max'. Current value: {medium}")
 
     def norm_tensor(self, precision: int = 3, medium="minmax"): 
         """Normalise les poids de la matrice
@@ -313,6 +321,11 @@ class Matrice():
 
 if __name__ == '__main__':
     import doctest
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # sys.path.append("..")
+    
     doctest.testmod()
     print(f"[DEBUG] Doctest clear")
     

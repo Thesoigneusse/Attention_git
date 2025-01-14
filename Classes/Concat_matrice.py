@@ -23,17 +23,53 @@ class Concat_matrice(CA_matrice):
     def layers(self) -> List[List[Matrice]]:
         return self._layers
     @layers.setter
-    def layers(self, value: List[List[Matrice]]) -> None:
-        assert isinstance(value, list), f"layers must be a list. Current Value: {type(value)}"
-        assert all(isinstance(layer, List[Matrice]) for layer in value), f"layers must be a list of list. Current Value: {[type(layer) for layer in value]}"
-        assert all(all(isinstance(matrice, Matrice) for matrice in layer) for layer in value), f"layers must be a list of list of Matrice. Current Value: {[type(layer[0]) for layer in value]}"
-        self._layers = value
+    def layers(self, layers: List[List[Matrice]]) -> None:
+        assert isinstance(layers, list), f"layers must be a list. Current Value: {type(layers)}"
+        assert all(isinstance(layer, List) for layer in layers), f"layers must be a list of list. Current Value: {[type(layer) for layer in layers]}"
+        assert all(all(isinstance(head, Matrice) for head in layer) for layer in layers), f"layers must be a list of list of Matrice. Current Value: {[type(layer[0]) for layer in layers]}"
+        self._layers = layers
 
-    
+    def fusion_bpe(self, action: str = "max") -> None:
+        """Fusionne les BPEs pour l'ensemble des matrices des chaque layers et de chaque tête d'attention
 
+        Args:
+            action (str, optional): action à appliquer sur la fusion des BPEs. Defaults to "max".
+        """
+        # Fusion des bpes pour les phrases courante et de contextes
+        full_snt = self.get_full_snt()
+        snt_list_fusion_bpe = self.get_full_snt().fusion_bpe()
 
+        self.crt.fusion_bpe()
+        for k in range(len(self.ctxs)):
+            self.ctxs[k].fusion_bpe()
 
+        # Fusion des bpes pour les matrices d'attention de chaque layer et de chaque head
+        print(f"[DEBUG] full_snt: {full_snt}")
+        print(f"[DEBUG] snt_list_fusion_bpe: {snt_list_fusion_bpe}")
+        assert len(full_snt) == self.layers[0][0].size(dim=0), f'taille non compatible. len(full_snt) vs. len(self.layers): {len(full_snt)} vs. {self.layers[0][0].size(dim = 0)}'
+        assert len(full_snt) == self.layers[0][0].size(dim=1), f'taille non compatible. len(full_snt) vs. len(self.layers): {len(full_snt)} vs. {self.layers[0][0].size(dim = 1)}'
 
+        for i_layer in range(len(self.layers)):
+            for h_head in range(len(self.layers[i_layer])):
+                self.layers[i_layer][h_head].fusion_bpe(row_list_fusion_bpe=snt_list_fusion_bpe, col_list_fusion_bpe=snt_list_fusion_bpe)
+        
+    def norm_tensor(self, medium = "minmax") -> None:
+        """Applique une normalisation sur les matrices des chaque layers et de chaque tête d'attention
+
+        Args:
+            medium (str, optional): médium de normalisation. Defaults to "minmax".
+        """
+        # Normalisation pour les matrices d'attention de chaque layer et de chaque head
+        for i_layer in range(len(self.layers)):
+            for h_head in range(len(self.layers[i_layer])):
+                self.layers[i_layer][h_head].norm_tensor(medium=medium)
+
+    def get_full_snt(self):
+        full_snt = Snt(identifiant=-1, tokens=[])
+        for ctx in self.ctxs:
+            full_snt += ctx
+        full_snt += self.crt
+        return full_snt
 
 if __name__ == '__main__':
     import doctest

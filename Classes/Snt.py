@@ -24,7 +24,8 @@ class Snt:
         return self.__json__()
 
     def __str__(self):
-        return f"Snt(id={self.identifiant}, tokens={self.tokens})"
+        return str(self.__json__())
+        # return f"Snt(id={self.identifiant}, tokens={self.tokens})"
 
     def __len__(self):
         return len(self.tokens)
@@ -33,11 +34,18 @@ class Snt:
         return str(self.__dict__)
 
     def __add__(self, other):
-        assert isinstance(other, Snt), f"other must be an instance of Snt. Current type: {type(other)}"
-        return Snt(identifiant=-1, tokens=self.tokens + other.tokens)
+        assert isinstance(other, Snt) or (isinstance(other, list) and all([isinstance(val, str) for val in other])), f"other must be an instance of Snt or a List[str]. Current type: {type(other)}"
+        if isinstance(other, Snt):
+            return Snt(identifiant=-1, tokens=self.tokens + other.tokens)
+        elif isinstance(other, list):
+            return Snt(identifiant=-1, tokens=self.tokens + other)
 
     def __mul__(self, other):
         assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
+
+    def copy(self):
+        from copy import copy
+        return copy(self)
         if isinstance(other, int) and other > 0:
             from copy import copy
             res = []
@@ -93,6 +101,7 @@ class Snt:
             self.tokens.append(value)
         elif isinstance(value, List):
             self.tokens += value
+    
     def toJSON(self):
         import json
         return json.dumps(
@@ -164,14 +173,13 @@ class Snt:
         >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
         [[3, 2, 1, 0]]
         >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
-        None
         """
         assert isinstance(tokens, list), f"tokens must be a list. Current type: {type(tokens)}"
         assert all(isinstance(tok, str) for tok in tokens), f"tokens must be a list of str. Current type: {[type(tok) for tok in tokens]}"
         assert isinstance(BPE_mark, str), f"BPE_mark must be a str. Current type: {type(BPE_mark)}"
         assert tokens, "Liste vide"
         assert not tokens[-1].endswith(BPE_mark), f"Dernier token contenant une marque de BPE. Sentence: {tokens}"
-        import Utils
+        from Utils import Utils
 
         liste_bpe = []
         flag = False
@@ -199,7 +207,7 @@ class Snt:
         >>> snt3.fusion_bpe()
         [[3, 2, 1, 0]]
         >>> print(snt3)
-        Snt(id=2, tokens=['lubulule', '.', '<eos>'])
+        {'_identifiant': 2, '_tokens': ['lubulule', '.', '<eos>']}
         """
         groupes_bpe = Snt.list_fusion_bpe(self.tokens, BPE_mark=BPE_mark) if list_bpe is None else list_bpe
         
@@ -221,6 +229,10 @@ class Snt:
 
 if __name__ == "__main__":
     import doctest
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
     doctest.testmod()
     print()
 

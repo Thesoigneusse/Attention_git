@@ -1,9 +1,19 @@
+import torch
 from typing import List
 from copy import deepcopy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
     from Classes.Matrice import Matrice
+# N : taille de la phrase courante
+# k : nombre de phrase de contexte
+# M_k : Taille de la phrase de contexte k
+# M : taille des phrases de contexte
+# S : Taille de la fusion des phrases de contexte
+# nb_heads : nombre de tête d'attention
+# L : nombre de layers
+
+
 
 def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str = "<eos>") -> list:
     """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase
@@ -28,7 +38,7 @@ def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str 
     assert len(snt) == len(src_segments_labels)
     return snt
 
-def full_sentence_to_ctx_and_crt(_snt: list, eos_token: str = "<eos>"):
+def full_sentence_to_ctx_and_crt(_snt: 'Snt', eos_token: str = "<eos>"):
     """Découpe une liste de tokens contenant plusieurs phrases en une liste de phrase où chaque phrase correspond à une liste de tokens
 
     Args:
@@ -37,21 +47,23 @@ def full_sentence_to_ctx_and_crt(_snt: list, eos_token: str = "<eos>"):
 
     Returns:
         list: liste de phrases
-    >>> s1 = Snt(identifiant = 1, tokens= ["t0", "t1", "<eos>", "t2", "t3", "<eos>", "t4", "t5", "<eos>", "t6", "t7", "<END>"])
+    >>> s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "<eos>", "t5", "t4", "<eos>", "t3", "t2", "<eos>", "t1", "t0", "<END>"])
     >>> print(full_sentence_to_ctx_and_crt(s1))
-    [['t0', 't1', '<eos>'], ['t2', 't3', '<eos>'], ['t4', 't5', '<eos>'], ['t6', 't7', '<END>']]
+    [{'_identifiant': 0, '_tokens': ['t7', 't6', '<eos>']}, {'_identifiant': 1, '_tokens': ['t5', 't4', '<eos>']}, {'_identifiant': 2, '_tokens': ['t3', 't2', '<eos>']}, {'_identifiant': 3, '_tokens': ['t1', 't0', '<END>']}]
     """
-    snt = deepcopy(_snt)
-    list_sentence = [[]]
-    for i in range(len(snt.tokens)): # On parcourt la liste des tokens
-        if snt.tokens[i] == eos_token: 
-            # Si on rencontre un token <eos> alors on l'ajoute puis créé une autre phrase
-            list_sentence[-1].append(eos_token)
-            list_sentence.append([])
-        else:
-            # Sinon on ajoute le token courant à la denière phrase
-            list_sentence[-1].append(snt.tokens[i])
-    return list_sentence
+    from Classes.Snt import Snt
+    # On parcours la phrase complète et on ajoute 
+    index_eos = [ i for i, tok in enumerate(_snt.tokens) if tok == eos_token]
+    if len(index_eos) > 0:
+        snt = deepcopy(_snt)
+        list_sentence = []
+        start = 0
+        for k, index in enumerate(index_eos):
+            list_sentence.append(Snt(identifiant= snt.identifiant - len(index_eos) + k, tokens= snt.tokens[start:index]))
+            list_sentence[k].append(eos_token)# Correction du eos_token manquant en fin de phrase
+            start = index + 1
+        list_sentence.append(Snt(identifiant= snt.identifiant, tokens= snt.tokens[start:]))
+        return list_sentence
 
 
 def correctif_src_sentence(src: List[str], src_seg_lab: List[int]) -> None:
@@ -145,9 +157,81 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List
         debut_row = fin_row
     return matrices
 
+def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str], ssl  : List[str]):
+    from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
+    # Correction du token <eos> manquant
+    full_snt = Snt(identifiant= identifiant, tokens = ajoute_eos_tokens_src(_snt= full_snt.split(), src_segments_labels=ssl))
+    snt_cutted = full_sentence_to_ctx_and_crt(full_snt)
+
+    # Au moins une phrase de contexte et la phrase courante (+ 1 car contient une phrase vide quand le nb de contexte est inférieur à la normale)
+    if len(snt_cutted) > 2: 
+        # Extraction des phrases de contexte et de la phrase courante
+        ctxs = []
+        for k in range(len(snt_cutted[:-1])):
+            ctxs.append(snt_cutted[k])
+        
+        # Extraction des différentes matrices à travers les 6 layers et les 8 têtes d'attention de chaque layer
+        layers = []
+        for layer in range(len(matrices)): # Pour chaque layer
+            heads = []
+            for head in range(len(matrices[layer])): # on extrait chaque tête par layer
+                full_matrice = torch.tensor(matrices[layer][head])
+                full_matrice = full_matrice.squeeze() # on supprime une dimension qui semble inutile (=1)
+                heads.append(Matrice(full_matrice))
+            layers.append(heads)
+        # layers : L x [nb_heads x [torch.Tensor(N x N)]]
+
+        # Traitement du cas particulier où un contexte n'est pas présent. Suppression des reliquats dans le contexte et les matrices d'attention
+        for i in range(len(ctxs)-1, -1, -1):
+            if ctxs[i].tokens == ["<eos>"]:
+                del ctxs[i]
+                del snt_cutted[i]
+                for layer in range(len(layers)):
+                    for head in range(len(layers[layer])):
+                        layers[layer][head].matrice = torch.cat([layers[layer][head].matrice[1:, 1:]])
+
+        full_ctx = ctxs[0].copy() # Snt(identifiant= identifiant - len(ctxs), tokens= ctxs[0].tokens)
+        if len(ctxs) > 1:
+            for snt in ctxs[1:]:
+                full_ctx += snt
+                # print(f"[debug] len(full_ctx): {len(full_ctx)}")
+        crt = snt_cutted[-1].copy()
+        # if _FULL_SNT: # permet prendre en compte la phrase courante ou non
+        #     full_ctx.tokens += crt.tokens
+
+        cutted_layers = []
+        for layer in range(len(layers)):
+            cutted_heads = []
+            for head in range(len(layers[layer])):
+                cutted_heads.append(cut_matrix_into_sentences(layers[layer][head], snt_cutted))
+                # Dernière liste correspond à la phrase courante vers les phrases de contexte et la phrase courante
+                # _FULL_SNT permet prendre en compte la phrase courante ou non
+                # if _FULL_SNT:
+                #     layers[layer][head].matrice = torch.cat([matrice.matrice for matrice in full_matrice_cutted[-1][:]], dim = 1)
+                # else:
+                #     layers[layer][head].matrice = torch.cat([matrice.matrice for matrice in full_matrice_cutted[-1][:-1]], dim = 1)
+            cutted_layers.append(cutted_heads)
+
+    return {'identifiant': identifiant, # int permettant d'identifier la sentence
+            'snt_cutted': snt_cutted, # List[S_k]
+            'full_ctx': full_ctx, # M
+            'crt': crt, # N
+            'layers': layers, # L[ nb_heads[ M * M ] ]
+            'cutted_layers': cutted_layers,} # L[ nb_heads[ k+crt[ k+crt[ len(S_k) x len(S_k) ] ] ] ]
+
+# def pre_traitement_tgt(identifiant: int, matrices: List[List[torch.Tensor]])
 
 
 if __name__ == '__main__':
     import doctest
+    import sys
+    sys.path.append("/home/getalp/lopezfab/Bureau/Attention_git/")
+    from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
     doctest.testmod()
     print(f"[DEBUG] Doctest clear")
+
+    # s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "<eos>", "t5", "t4", "<eos>", "t3", "t2", "<eos>", "t1", "t0", "<END>"])
+    # print(full_sentence_to_ctx_and_crt(s1))
+
