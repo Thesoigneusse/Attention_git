@@ -95,20 +95,9 @@ class Snt:
             assert isinstance(identifiant, int), f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
         self._identifiant = identifiant
 
-    def append(self, value: str):
-        assert isinstance(value, str) or (isinstance(value, list) and all([isinstance(val, str) for val in value])), f"[DEBUG] Snt().append only supports strings and List[string]. Current type : {type(value)}"
-        if isinstance(value, str):
-            self.tokens.append(value)
-        elif isinstance(value, List):
-            self.tokens += value
-    
-    def toJSON(self):
-        import json
-        return json.dumps(
-            self,
-            default=lambda o: o.__dict__,
-            sort_keys=True,
-            indent=4)
+    @staticmethod
+    def len(self) -> int:
+        return len(self.tokens)
 
     @staticmethod
     def list_suppr_pad(tokens, padding_mark="<pad>", strict=False)-> List[int]:
@@ -136,31 +125,6 @@ class Snt:
             if tokens[i] == padding_mark:
                 list_suppr_pad.append(i)
         return list_suppr_pad
-
-    def suppr_pad(self, list_index: List[int] = None, padding_mark='<pad>', strict=False) -> List[int]:
-        """Supprime le padding de la phrase et retourne une liste contenant les index supprimés
-
-        Args:
-            padding_mark (str, optional): Chaîne de caractères correspondant au token de padding. Defaults to "<pad>".
-            strict (bool, optional): Permet de garder un token de padding (strict= False) ou non (strict = True). Defaults to False.
-
-        Returns:
-            List[int]: Liste d'index dont la position est à supprimer
-        
-        Examples:
-        >>> s1 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-        >>> list_index = Snt.list_suppr_pad(s1.tokens, padding_mark="<pad>", strict=False)
-        >>> s1.suppr_pad(list_index)
-        [6, 2, 1]
-        >>> s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-        >>> s2.suppr_pad(strict=True)
-        [6, 2, 1, 0]
-        """
-        list_index = Snt.list_suppr_pad(self.tokens, padding_mark=padding_mark, strict=strict) if list_index is None else list_index
-
-        for i in list_index:
-            del self.tokens[i]
-        return list_index
 
     @staticmethod
     def list_fusion_bpe(tokens: List[str], BPE_mark: str = '@@') -> List[int] :
@@ -192,7 +156,79 @@ class Snt:
                 flag = False
         return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else None
         # return [ i for i in range(len(tokens) -1, -1, -1) if tokens[i].endswith(BPE_mark) ]
+
+    def append(self, value: str):
+        """Ajoute un (ou plusieurs via liste) token(s) à la fin de la phrase
+
+        Args:
+            value (str or List[str]): token ou liste à ajouter à la fin de la phrase
+        
+        Tests:
+        >>> s1 = Snt(identifiant= 3, tokens= ['Ce@@', 'ci', 'est', '<pad>', 'un'])
+        >>> s1.append('test')
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['Ce@@', 'ci', 'est', '<pad>', 'un', 'test']}
+        >>> s1 = Snt(identifiant= 3, tokens= ['Ce@@', 'ci', 'est', 'test', '<pad>', 'un'])
+        >>> s1.append(['test1', 'test2'])
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['Ce@@', 'ci', 'est', 'test', '<pad>', 'un', 'test1', 'test2']}
+        """
+        assert isinstance(value, str) or (isinstance(value, list) and all([isinstance(val, str) for val in value])), f"[DEBUG] Snt().append only supports strings and List[string]. Current type : {type(value)}"
+        if isinstance(value, str):
+            self.tokens.append(value)
+        elif isinstance(value, List):
+            self.tokens += value
     
+    def insert(self, index: int, value) -> None:
+        """Insert value en position index dans la liste de tokens
+
+        Args:
+            index (int): position de l'index où inserer value
+            value (str): token unique à insérer
+        
+        Tests:
+        >>> s1 = Snt(identifiant= 3, tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        >>> s1.insert(0, "test")
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['test', 'Ce@@', 'ci', 'est', '<pad>', 'un', 'te@@', 'st', '.', '<eos>']}
+        """
+        assert isinstance(index, int), f"index must be an int. Current type: {type(index)}"
+        assert isinstance(value, str), f"value must be a str. Current type: {type(value)}"
+        self.tokens.insert(index, value)
+
+    def toJSON(self):
+        import json
+        return json.dumps(
+            self,
+            default=lambda o: o.__dict__,
+            sort_keys=True,
+            indent=4)
+
+    def suppr_pad(self, list_index: List[int] = None, padding_mark='<pad>', strict=False) -> List[int]:
+        """Supprime le padding de la phrase et retourne une liste contenant les index supprimés
+
+        Args:
+            padding_mark (str, optional): Chaîne de caractères correspondant au token de padding. Defaults to "<pad>".
+            strict (bool, optional): Permet de garder un token de padding (strict= False) ou non (strict = True). Defaults to False.
+
+        Returns:
+            List[int]: Liste d'index dont la position est à supprimer
+        
+        Examples:
+        >>> s1 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        >>> list_index = Snt.list_suppr_pad(s1.tokens, padding_mark="<pad>", strict=False)
+        >>> s1.suppr_pad(list_index)
+        [6, 2, 1]
+        >>> s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        >>> s2.suppr_pad(strict=True)
+        [6, 2, 1, 0]
+        """
+        list_index = Snt.list_suppr_pad(self.tokens, padding_mark=padding_mark, strict=strict) if list_index is None else list_index
+
+        for i in list_index:
+            del self.tokens[i]
+        return list_index
+
     def fusion_bpe(self, list_bpe: List[int] = None, BPE_mark: str = '@@') -> List[int]:
         """Fusionne les tokens BPEisés
 
@@ -234,12 +270,12 @@ if __name__ == "__main__":
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
     doctest.testmod()
-    print()
+    # print()
 
-    print(Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="<pad>", strict=True))
+    # print(Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="<pad>", strict=True))
 
-    s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-    print(s2.suppr_pad(strict=True))
+    # s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+    # print(s2.suppr_pad(strict=True))
     # s1 = Snt(2, tokens=["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
     # liste = Snt.list_fusion_bpe(s1.tokens)
     # s1.fusion_bpe(liste)

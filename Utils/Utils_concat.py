@@ -14,8 +14,55 @@ if TYPE_CHECKING:
 # L : nombre de layers
 
 
+def ajoute_eos_tokens_tgt(snt: 'Snt', tgt_segments_labels: List[int], eos_token = "<eos>") -> None:
+    """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase coté target
 
-def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str = "<eos>") -> list:
+    Args:
+        _snt (_type_): list de token de la phrase coté target
+        tgt_segments_labels (_type_): list des position où ajouter le eos_token
+        eos_token (str, optional): token end-of-sentence. Defaults to "<eos>".
+
+    Returns:
+        list: list de tokens de la phrase coté target avec les tokens end-of-sentence
+
+    Tests:
+    >>> s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "t5", "t4", "t3", "t2", "t1", "t0"])
+    >>> ajoute_eos_tokens_tgt(s1, [2,5,8])
+    >>> print(s1)    
+    {'_identifiant': 3, '_tokens': ['t7', 't6', '<eos>', 't5', 't4', '<eos>', 't3', 't2', '<eos>', 't1', 't0']}
+    """
+    for position in tgt_segments_labels:
+        snt.insert(int(position), eos_token)
+
+def ajoute_eos_tokens_src(snt: 'Snt', src_segments_labels: list, eos_token: str = "<eos>") -> None:
+    """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase
+
+    Args:
+        _snt (Snt): Snt des tokens de la phrase côté source
+        src_segments_labels (list): list d'id de contexte pour chaque token de la phrase _snt
+        eos_token (str, optional): token end-of-sentence. Defaults to "<eos>".
+
+    Returns:
+        list: list de tokens de la phrase coté source avec les tokens end-of-sentence
+
+    Tests:
+    >>> s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "t5", "t4", "t3", "t2", "t1", "t0"])
+    >>> ajoute_eos_tokens_src(s1, [3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0])
+    >>> print(s1)
+    {'_identifiant': 3, '_tokens': ['t7', 't6', '<eos>', 't5', 't4', '<eos>', 't3', 't2', '<eos>', 't1', 't0']}
+    """
+    assert len(snt) <= len(src_segments_labels), f"[DEBUG]Longueur error, len(snt) vs. len(labels): {len(snt)} vs. {len(src_segments_labels)}"
+    # Si on a des éléments à ajouter
+    if len(snt) < len(src_segments_labels):
+        # Parcours de src_segments_label
+        for i in range(len(src_segments_labels) - 1):
+            # Si on trouve un changement de segments alors on ajoute un token <eos>
+            if src_segments_labels[i] != src_segments_labels[i+1]:
+                snt.insert(i, eos_token)
+    assert len(snt) == len(src_segments_labels)
+
+
+def ajoute_eos_tokens_src_deprecated(_snt: List[str], src_segments_labels: list, eos_token: str = "<eos>") -> list:
     """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase
 
     Args:
@@ -37,6 +84,22 @@ def ajoute_eos_tokens_src(_snt: list, src_segments_labels: list, eos_token: str 
                 snt.insert(i, eos_token)
     assert len(snt) == len(src_segments_labels)
     return snt
+def ajoute_eos_tokens_tgt_deprecated(_snt: List[str], tgt_segments_labels, eos_token = "<eos>"):
+    """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase coté target
+
+    Args:
+        _snt (_type_): list de token de la phrase coté target
+        tgt_segments_labels (_type_): list des position où ajouter le eos_token
+        eos_token (str, optional): token end-of-sentence. Defaults to "<eos>".
+
+    Returns:
+        list: list de tokens de la phrase coté target avec les tokens end-of-sentence
+    """
+    snt= deepcopy(_snt)
+    for position in tgt_segments_labels:
+        snt.insert(int(position[1:-1]), eos_token)
+    return snt
+
 
 def full_sentence_to_ctx_and_crt(_snt: 'Snt', eos_token: str = "<eos>"):
     """Découpe une liste de tokens contenant plusieurs phrases en une liste de phrase où chaque phrase correspond à une liste de tokens
@@ -233,5 +296,11 @@ if __name__ == '__main__':
     print(f"[DEBUG] Doctest clear")
 
     # s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "<eos>", "t5", "t4", "<eos>", "t3", "t2", "<eos>", "t1", "t0", "<END>"])
+    # s1 = Snt(identifiant = 3, tokens= ["t7", "t6", "t5", "t4", "t3", "t2", "t1", "t0"])
+    # snt_ajoute_eos_tokens_tgt(s1, [2,5,8])
+    # print(s1)
+    # snt_ajoute_eos_tokens_src(s1, [3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0])
+
+    # print(s1)
     # print(full_sentence_to_ctx_and_crt(s1))
 

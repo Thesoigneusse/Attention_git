@@ -2,6 +2,7 @@ from Classes.Matrice import Matrice
 from Classes.CA_matrice import CA_matrice
 from Classes.Snt import Snt
 from typing import List
+import torch
 # N : taille de la phrase courante
 # k : nombre de phrase de contexte
 # M_k : Taille de la phrase de contexte k
@@ -70,6 +71,21 @@ class Concat_matrice(CA_matrice):
             full_snt += ctx
         full_snt += self.crt
         return full_snt
+
+    def get_head_means(self):
+        """Retourne la liste des têtes d'attention moyennée par layers
+            L x nb_heads x N x M -> L x N x M
+        """
+        import torch
+        temp_head = torch.ones_like(self.layers[0])
+        print(f"[DEBUG] len(full_snt): {len(self.get_full_snt())}")
+        print(f"[DEBUG] self.layers[0].size(): {self.layers[0].size()}")
+        print(f"[DEBUG] temp_head.size(): {temp_head.size()}")
+
+        for layer in range(len(self.layers)):
+            temp_head = torch.Tensor(self.layers[layer])
+            print(f"[après] temp_head.size(): {temp_head.size()}")
+
 
 if __name__ == '__main__':
     import doctest
