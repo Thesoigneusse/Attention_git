@@ -49,7 +49,7 @@ class Matrice(torch.Tensor):
             raise NotImplementedError(f"fusion_ligne: unknown medium.\nSupported medium : {dict_action.keys()}\nCurrent medium: '{medium}'")
         return self
 
-    def fusion_bpe(self, groupes, medium='max'):
+    def fusion_bpe(self, row_list_groupes: List[List[int]] = None, col_list_groupes: List[List[int]] = None, medium='max'):
         """Fusionne tout les BPEs présent dans groupes.
 
         Args:
@@ -62,8 +62,13 @@ class Matrice(torch.Tensor):
                  [ 7.,  8.,  9.],
                  [13., 14., 15.]])
         """
-        for groupe in groupes:
-            self = self.fusion_ligne(groupe, medium=medium)
+
+        if row_list_groupes is not None:
+            for groupe in row_list_groupes:
+                self = self.fusion_ligne(groupe, medium=medium)
+        if col_list_groupes is not None:
+            for groupe in col_list_groupes:
+                self = self.transpose(0,1).fusion_ligne(groupe, medium=medium).transpose(0,1)
         return self
 
     def norm_tenseur(self, medium="minmax"):
@@ -142,21 +147,25 @@ class Matrice(torch.Tensor):
         """Supprime les valeurs correspondant aux tokens de padding.
 
         Args:
-            list_suppr_pad (List[int]): Liste décroissante des index des tokens à supprimer
+            row_list_suppr_pad (List[int]): Liste décroissante des index des tokens à supprimer sur la ligne
+            col_list_suppr_pad (List[int]): Liste décroissante des index des tokens à supprimer sur la colonne
         """
-        if row_list_suppr_pad is not None:
-            assert isinstance(row_list_suppr_pad, list), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad)}"
-            assert all([isinstance(index, int) for index in row_list_suppr_pad]), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad[0])}"
+        # Suppression des lignes de padding
+        if row_list_suppr_pad is not None and len(row_list_suppr_pad) > 0:
+            assert isinstance(row_list_suppr_pad, list), f"row_list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad)}"
+            assert all([isinstance(index, int) for index in row_list_suppr_pad]), f"row_list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad[0])}"
             row_list_suppr_pad.sort(reverse=True)
-            colonnes_a_conserver = [i for i in range(self.shape[1]) if i not in row_list_suppr_pad]
-            self = self[:, colonnes_a_conserver]
-        if col_list_suppr_pad is not None:
-            assert isinstance(col_list_suppr_pad, list), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad)}"
-            assert all([isinstance(index, int) for index in col_list_suppr_pad]), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad[0])}"
-            temp = self.transpose(0,1)
+            rows_a_conserver = [i for i in range(self.shape[0]) if i not in row_list_suppr_pad]
+            self = self[rows_a_conserver, ...]
+
+        # Suppression des colonnes de padding
+        if col_list_suppr_pad is not None and len(col_list_suppr_pad) > 0:
+            assert isinstance(col_list_suppr_pad, list), f"col_list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad)}"
+            assert all([isinstance(index, int) for index in col_list_suppr_pad]), f"col_list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad[0])}"
             col_list_suppr_pad.sort(reverse=True)
-            colonnes_a_conserver = [i for i in range(temp.shape[0]) if i not in col_list_suppr_pad]
-            self = temp[:, colonnes_a_conserver].transpose(0,1)
+            cols_a_conserver = [i for i in range(self.shape[1]) if i not in col_list_suppr_pad]
+            self = self[:, cols_a_conserver]
+        return self
 
     def ecriture_xslx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
         """Écrit la matrice au format xslx
