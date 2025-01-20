@@ -5,6 +5,16 @@ def max(row: torch.Tensor) -> torch.Tensor:
     """
     return torch.max(row, dim=0).values
 
+
+def max_test(row1: torch.Tensor, row2: torch.Tensor):
+    """Retourne la 
+
+    Args:
+        row1 (torch.Tensor): _description_
+        row2 (torch.Tensor): _description_
+    """
+    return torch.max(row1, row2)
+
 def mean(row: torch.Tensor) -> torch.Tensor:
     """
     Retourne la moyenne d'une matrice torch.

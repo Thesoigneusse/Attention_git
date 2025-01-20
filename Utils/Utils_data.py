@@ -115,36 +115,39 @@ def lecture_multi_enc_objet(data):
 
     return (crt, ctxs, ctxs_heads, sl_heads)
 
-def lecture_concat_objet(data):
-    """prends en entrée un json objet de la lecture de données d'un modèle concat et retourne les éléments contenu
+def lecture_concat_objet(data) -> dict:
+    """prends en entrée un json objet de la lecture de données d'un modèle concat et retourne les éléments contenus
 
     Args:
-        data (str): json objet
+        data (dict): {
+                      'id': identifiant de la phrase courante,
+                      'src_tokens': tokens source des phrase ctxs + crt,
+                      'tgt_tokens': tokens target des phrase ctxs + crt,
+                      'heads_enc_attn': matrice des poids des layers et tête d'attention (snts x snts) côté source,
+                      'heads_dec_attn': matrice des poids des layers et tête d'attention (snts x snts) côté target
+                      }
     """
     # print(data.keys())
     from Classes.Snt import Snt
-    # phrase courante
-    crt = Snt(identifiant= int(data["id"]), tokens= data["crt"])
-    
-    # phrases de contexte
-    ctxs = []
-    ctxs_heads = []
-    for k in range(len(data["ctxs"])):
-        ctxs.append(Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
-        heads = []
-        for h in range(len(data["heads"][0])):
-            heads.append(Matrice(matrice = torch.DoubleTensor(data["heads"][k][h])))
-        ctxs_heads.append(heads)
-    correction_eos_context(ctxs)
-    correction_eos_crt(crt)
+    from Utils import Utils_concat
 
-    # sentence level heads
-    sl_heads = []
-    for h in range(len(data["SL_matrice"])):
-        sl_heads.append(Sl_matrice(matrice = torch.DoubleTensor(data["SL_matrice"][h]).squeeze()))
+    # Coté source
+    src_full_snt = Snt(identifiant= data['id'], tokens = data['src_tokens'].split())
+    Utils_concat.ajoute_eos_tokens_src(snt= src_full_snt, src_segments_labels= data['src_segments_labels'])
+    enc_matrices = torch.Tensor(data['heads_enc_attn'])
 
+    # Coté target
+    tgt_full_snt = Snt(identifiant= data['id'], tokens = data['tgt_tokens'].split())
+    Utils_concat.ajoute_eos_tokens_tgt(snt= tgt_full_snt, tgt_segments_labels= data['tgt_eos_pos'])
+    dec_matrices = torch.Tensor(data['heads_dec_attn']).squeeze()
 
-    return (crt, ctxs, ctxs_heads, sl_heads)
+    return {
+        'id': data['id'],
+        'src_tokens': src_full_snt,
+        'tgt_tokens': tgt_full_snt,
+        'heads_enc_attn': enc_matrices,
+        'heads_dec_attn': dec_matrices
+    }
 
 
 def correction_eos_context(ctxs: List["Snt"])-> None:

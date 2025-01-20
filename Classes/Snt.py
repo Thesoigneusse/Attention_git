@@ -36,9 +36,9 @@ class Snt:
     def __add__(self, other):
         assert isinstance(other, Snt) or (isinstance(other, list) and all([isinstance(val, str) for val in other])), f"other must be an instance of Snt or a List[str]. Current type: {type(other)}"
         if isinstance(other, Snt):
-            return Snt(identifiant=-1, tokens=self.tokens + other.tokens)
+            return Snt(identifiant=self.identifiant, tokens=self.tokens + other.tokens)
         elif isinstance(other, list):
-            return Snt(identifiant=-1, tokens=self.tokens + other)
+            return Snt(identifiant=self.identifiant, tokens=self.tokens + other)
 
     def __mul__(self, other):
         assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"

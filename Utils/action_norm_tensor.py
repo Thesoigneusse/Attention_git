@@ -20,14 +20,17 @@ def norm_by_min_max(row: torch.Tensor) -> torch.Tensor:
     """
     assert isinstance(row, torch.Tensor), f"row must be a torch.Tensor. Current type: {type(row)}"
 
-
-    min = torch.min(row[row != 0]) # Permet d'éviter de prendre en compte les 0 de paddings
-    max = torch.max(row) - min
-    if max == 0.0:
-        # print(f"[DEBUG] cas particulier")
-        # Dans le cas où il n'y a qu'un seul élément dans la matrice on retourne la ligne avec l'élément = à 1
-        return torch.where(row > 0, (row) / (min), torch.tensor(0.0, dtype=row.dtype))
-    return torch.where(row > 0, (row - min) / (max), torch.tensor(0.0, dtype=row.dtype))
+    row[row != 0].size(dim = 0)
+    if row[row != 0].size(dim = 0) > 0:
+        min = torch.min(row[row != 0])  # Permet d'éviter de prendre en compte les 0 de paddings
+        max = torch.max(row) - min 
+        if max == 0.0:
+            # print(f"[DEBUG] cas particulier")
+            # Dans le cas où il n'y a qu'un seul élément dans la matrice on retourne la ligne avec l'élément = à 1
+            row = torch.where(row > 0, (row) / (min), torch.tensor(0.0, dtype=row.dtype))
+        else:
+            row = torch.where(row > 0, (row - min) / (max), torch.tensor(0.0, dtype=row.dtype))
+    return row
 
 if __name__ == '__main__':
     import torch

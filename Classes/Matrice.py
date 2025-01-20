@@ -3,14 +3,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
 
-class TorchMatrice(torch.Tensor):
-    def __new__(cls, data, *args, **kwargs):
-        instance = super().__new__(cls, data, *args, **kwargs)
+class Matrice(torch.Tensor):
+    def __new__(cls, data = None, *args, **kwargs):
+        instance = super().__new__(cls, data, *args, **kwargs) if data is not None else super().__new__(cls, 0, *args, **kwargs)
         return instance
 
-    def __init__(self, data):
+    def __init__(self, data = None):
         pass
 
+    def new_empty(self, size, *args, **kwargs):
+        return Matrice(super().new_empty(size, *args, **kwargs))
+    
     def suppr_ligne_i(tenseur, index):
         return torch.cat([tenseur[:index,...], tenseur[index+1:, ...]])
 
@@ -31,17 +34,16 @@ class TorchMatrice(torch.Tensor):
             torch.Tensor: torch.Tensor de sortie correspondant à la fusion des deux lignes du torch.Tensor d'entrée
 
         Tests:
-        >>> TorchMatrice([[1,2,3], [3,2,1]]).fusion_ligne([1,0], medium='mean')
-        TorchMatrice([[2., 2., 2.]])
-        >>> TorchMatrice([[1,2,3], [3,2,1]]).fusion_ligne([1,0], medium='max')
-        TorchMatrice([[3., 2., 3.]])
+        >>> Matrice([[1,2,3], [3,2,1]]).fusion_ligne([1,0], medium='mean')
+        Matrice([[2., 2., 2.]])
+        >>> Matrice([[1,2,3], [3,2,1]]).fusion_ligne([1,0], medium='max')
+        Matrice([[3., 2., 3.]])
         """
         dict_action = {"max": lambda t: torch.max(t, dim = 0).values,
                         "mean": lambda t: torch.mean(t , dim =0)}
         if medium in dict_action:
             self[index, ...] = dict_action[medium](self[index])
             self = self.suppr_lignes_from_i1_to_i2(index[-1], index[0])
-            # self = torch.cat([self[:index[-1] , ...],  self[index[0]:, ...]])
         else:
             raise NotImplementedError(f"fusion_ligne: unknown medium.\nSupported medium : {dict_action.keys()}\nCurrent medium: '{medium}'")
         return self
@@ -54,10 +56,10 @@ class TorchMatrice(torch.Tensor):
             medium (str, optional): méthode de fusion. Defaults to 'max'.
 
         Tests:
-        >>> TorchMatrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).fusion_bpe(groupes= [[4,3], [2,1]])
-        TorchMatrice([[ 1.,  2.,  3.],
-                      [ 7.,  8.,  9.],
-                      [13., 14., 15.]])
+        >>> Matrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).fusion_bpe(groupes= [[4,3], [2,1]])
+        Matrice([[ 1.,  2.,  3.],
+                 [ 7.,  8.,  9.],
+                 [13., 14., 15.]])
         """
         for groupe in groupes:
             self = self.fusion_ligne(groupe, medium=medium)
@@ -70,19 +72,20 @@ class TorchMatrice(torch.Tensor):
             medium (str, optional): Action de normalisation à appliquer sur le tenseur. Defaults to "minmax".
 
         Tests:
-        >>> TorchMatrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur()
-        TorchMatrice([[0.0000, 0.5000, 1.0000],
-                      [0.0000, 0.5000, 1.0000],
-                      [0.0000, 0.5000, 1.0000],
-                      [0.0000, 0.5000, 1.0000],
-                      [0.0000, 0.5000, 1.0000]])
-        >>> TorchMatrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur(medium = "max")
-        TorchMatrice([[0.3333, 0.6667, 1.0000],
-                      [0.6667, 0.8333, 1.0000],
-                      [0.7778, 0.8889, 1.0000],
-                      [0.8333, 0.9167, 1.0000],
-                      [0.8667, 0.9333, 1.0000]])
+        >>> Matrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur()
+        Matrice([[0.0000, 0.5000, 1.0000],
+                 [0.0000, 0.5000, 1.0000],
+                 [0.0000, 0.5000, 1.0000],
+                 [0.0000, 0.5000, 1.0000],
+                 [0.0000, 0.5000, 1.0000]])
+        >>> Matrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur(medium = "max")
+        Matrice([[0.3333, 0.6667, 1.0000],
+                 [0.6667, 0.8333, 1.0000],
+                 [0.7778, 0.8889, 1.0000],
+                 [0.8333, 0.9167, 1.0000],
+                 [0.8667, 0.9333, 1.0000]])
         """
+        
         from Utils import action_norm_tensor as ant
         dict_action = {"minmax": ant.norm_by_min_max,
                         "max": ant.norm_by_max}
@@ -105,22 +108,22 @@ class TorchMatrice(torch.Tensor):
             NotImplementedError: Retourne une erreur dans le cas où la méthode à utiliser n'est pas implémentée.
 
         Tests:
-        >>> t1 = TorchMatrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
+        >>> t1 = Matrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
         >>> t1.suppr_inf()
         >>> print(t1)
-        TorchMatrice([[0.0000, 0.0000, 0.7000],
-                      [0.4000, 0.4000, 0.0000],
-                      [0.0000, 0.0000, 0.6000],
-                      [0.0000, 0.0000, 0.3400],
-                      [0.0000, 0.3500, 0.3500]])
-        >>> t1 = TorchMatrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
+        Matrice([[0.0000, 0.0000, 0.7000],
+                 [0.4000, 0.4000, 0.0000],
+                 [0.0000, 0.0000, 0.6000],
+                 [0.0000, 0.0000, 0.3400],
+                 [0.0000, 0.3500, 0.3500]])
+        >>> t1 = Matrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
         >>> t1.suppr_inf(medium = 'to_uniform')
         >>> print(t1)
-        TorchMatrice([[0.3333, 0.3333, 0.7000],
-                      [0.4000, 0.4000, 0.3333],
-                      [0.3333, 0.3333, 0.6000],
-                      [0.3333, 0.3333, 0.3400],
-                      [0.3333, 0.3500, 0.3500]])
+        Matrice([[0.3333, 0.3333, 0.7000],
+                 [0.4000, 0.4000, 0.3333],
+                 [0.3333, 0.3333, 0.6000],
+                 [0.3333, 0.3333, 0.3400],
+                 [0.3333, 0.3500, 0.3500]])
         """
         size = self.size()
         if size[0] > 1 :
@@ -134,7 +137,7 @@ class TorchMatrice(torch.Tensor):
             else:
                 raise NotImplementedError(f"suppr_inf ne supporte pas la suppression uniforme avec la méthode: '{medium}'")
 
-    def ecriture_xslt(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
+    def ecriture_xslx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
         """Écrit la matrice au format xslx
 
         Args:
@@ -181,9 +184,17 @@ class TorchMatrice(torch.Tensor):
                     worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
         workbook.close()
 
-
-    def test_(self, value):
-        return TorchMatrice([[1,2,3], [3,2,1]])
+    def test_(self, value = 0):
+        return Matrice([[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                        [10,11,12,13,14,15,16,17,18,19],
+                        [20,21,22,23,24,25,26,27,28,29],
+                        [30,31,32,33,34,35,36,37,38,39],
+                        [40,41,42,43,44,45,46,47,48,49],
+                        [50,51,52,53,54,55,56,57,58,59],
+                        [60,61,62,63,64,65,66,67,68,69],
+                        [70,71,72,73,74,75,76,77,78,79],
+                        [80,81,82,83,84,85,86,87,88,89],
+                        [90,91,92,93,94,95,96,97,98,99]]) + value
 
 if __name__ == "__main__":
     import doctest
@@ -194,21 +205,21 @@ if __name__ == "__main__":
     doctest.testmod()
     print(f"[DEBUG] doctest finished.\n")
     # from Classes.Snt import Snt
-    # t1 = TorchMatrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
+    # t1 = Matrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
     # t1.ecriture_xslt(crt= Snt(3, ['a', 'b', 'c', 'd', 'e']),
     #                     ctx = Snt(2, ['f', 'g', 'h', 'i']),
     #                     absolute_folder= "/home/getalp/lopezfab/Documents/",
     #                     filename="test")
 
-    # t1 = TorchMatrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
+    # t1 = Matrice([[0.1, 0.2, 0.7], [0.4,0.4,0.2], [0.13,0.27,0.6], [0.33,0.33,0.34], [0.30,0.35,0.35]])
     # t1.suppr_inf(medium = 'to_uniform')
     # print(t1)
 
-    # print(TorchMatrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur(medium = "max"))
-    # print(TorchMatrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).fusion_bpe(groupes= [[4,3], [2,1]]))
+    # print(Matrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).norm_tenseur(medium = "max"))
+    # print(Matrice([[1,2,3], [4,5,6], [7,8,9], [10,11,12], [13,14,15]]).fusion_bpe(groupes= [[4,3], [2,1]]))
 
 
 
-    # test.norm_tenseur()
-    # print(test)
-    # print(test.fusion_ligne(0,1, medium='mean'))
+    test = Matrice(0).test_(10)
+
+    print(test)

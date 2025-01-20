@@ -32,7 +32,7 @@ def ajoute_eos_tokens_tgt(snt: 'Snt', tgt_segments_labels: List[int], eos_token 
     {'_identifiant': 3, '_tokens': ['t7', 't6', '<eos>', 't5', 't4', '<eos>', 't3', 't2', '<eos>', 't1', 't0']}
     """
     for position in tgt_segments_labels:
-        snt.insert(int(position), eos_token)
+        snt.insert(int(position[1:-1]), eos_token)
 
 def ajoute_eos_tokens_src(snt: 'Snt', src_segments_labels: list, eos_token: str = "<eos>") -> None:
     """Ajoute un token end-of-sentence dans la phrase afin de faire concorder la taille de la matrice et de la phrase
@@ -116,17 +116,17 @@ def full_sentence_to_ctx_and_crt(_snt: 'Snt', eos_token: str = "<eos>"):
     """
     from Classes.Snt import Snt
     # On parcours la phrase complète et on ajoute 
+    list_sentence = []
     index_eos = [ i for i, tok in enumerate(_snt.tokens) if tok == eos_token]
     if len(index_eos) > 0:
         snt = deepcopy(_snt)
-        list_sentence = []
         start = 0
         for k, index in enumerate(index_eos):
             list_sentence.append(Snt(identifiant= snt.identifiant - len(index_eos) + k, tokens= snt.tokens[start:index]))
             list_sentence[k].append(eos_token)# Correction du eos_token manquant en fin de phrase
             start = index + 1
         list_sentence.append(Snt(identifiant= snt.identifiant, tokens= snt.tokens[start:]))
-        return list_sentence
+    return list_sentence
 
 
 def correctif_src_sentence(src: List[str], src_seg_lab: List[int]) -> None:
@@ -148,7 +148,7 @@ def correctif_src_sentence(src: List[str], src_seg_lab: List[int]) -> None:
     return src 
 
 
-def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List['Matrice']]:
+def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List['Snt']) -> List[List['Matrice']]:
     """Découpe une Matrice ctx+crt de self-attention en différentes Matrices k3 x k3, k3 x k2, ..., k0 x k0
 
         k3xk3   k3xk2   k3xk1   k3xk0
@@ -196,8 +196,8 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List
     """
     from Classes.Matrice import Matrice
 
-    assert _matrice.matrice.size(dim=0) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim0 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
-    assert _matrice.matrice.size(dim=1) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim1 vs. snt len: {_matrice.matrice.size()} vs. {sum([len(snt) for snt in snts])}"
+    assert _matrice.size(dim=0) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim0 vs. snt len: {_matrice.size()} vs. {sum([len(snt) for snt in snts])}"
+    assert _matrice.size(dim=1) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim1 vs. snt len: {_matrice.size()} vs. {sum([len(snt) for snt in snts])}"
 
     debut_row, fin_row = 0, 0
     matrices = []
@@ -211,7 +211,7 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List
         for j in range(len(snts)):
             fin_col += len(snts[j])
             # On ajoute les éléments de la matrice dans la liste temporaire
-            temp.append(Matrice(_matrice.matrice[
+            temp.append(Matrice(_matrice[
                     debut_row:fin_row,
                     debut_col:fin_col
                 ]))
@@ -220,11 +220,13 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List[str]) -> List[List
         debut_row = fin_row
     return matrices
 
-def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str], ssl  : List[str]):
+def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str]):
     from Classes.Snt import Snt
     from Classes.Matrice import Matrice
     # Correction du token <eos> manquant
-    full_snt = Snt(identifiant= identifiant, tokens = ajoute_eos_tokens_src(_snt= full_snt.split(), src_segments_labels=ssl))
+    # full_snt = Snt(identifiant= identifiant, tokens = full_snt.split())
+    # ajoute_eos_tokens_src(snt= full_snt, src_segments_labels= ssl)
+
     snt_cutted = full_sentence_to_ctx_and_crt(full_snt)
 
     # Au moins une phrase de contexte et la phrase courante (+ 1 car contient une phrase vide quand le nb de contexte est inférieur à la normale)
@@ -239,7 +241,7 @@ def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], ful
         for layer in range(len(matrices)): # Pour chaque layer
             heads = []
             for head in range(len(matrices[layer])): # on extrait chaque tête par layer
-                full_matrice = torch.tensor(matrices[layer][head])
+                full_matrice = matrices[layer][head]
                 full_matrice = full_matrice.squeeze() # on supprime une dimension qui semble inutile (=1)
                 heads.append(Matrice(full_matrice))
             layers.append(heads)
@@ -276,15 +278,32 @@ def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], ful
                 #     layers[layer][head].matrice = torch.cat([matrice.matrice for matrice in full_matrice_cutted[-1][:-1]], dim = 1)
             cutted_layers.append(cutted_heads)
 
-    return {'identifiant': identifiant, # int permettant d'identifier la sentence
-            'snt_cutted': snt_cutted, # List[S_k]
-            'full_ctx': full_ctx, # M
-            'crt': crt, # N
-            'layers': layers, # L[ nb_heads[ M * M ] ]
-            'cutted_layers': cutted_layers,} # L[ nb_heads[ k+crt[ k+crt[ len(S_k) x len(S_k) ] ] ] ]
+        return {'identifiant': identifiant, # int permettant d'identifier la sentence
+                'snt_cutted': snt_cutted, # List[S_k]
+                'layers': layers} #, # L[ nb_heads[ M * M ] ]
+    else:
+        return None
+                # 'crt': crt, # N
+            # 'full_ctx': full_ctx, # M
+            #'cutted_layers': cutted_layers,} # L[ nb_heads[ k+crt[ k+crt[ len(S_k) x len(S_k) ] ] ] ]
 
-# def pre_traitement_tgt(identifiant: int, matrices: List[List[torch.Tensor]])
+def pre_traitement_tgt(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str]) :
+    from Utils import Utils_concat
+    from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
+    # snts = Snt(identifiant = identifiant, tokens = Utils_concat.ajoute_eos_tokens_tgt(full_snt.split(), tgt_segments_labels = ssl))
+    snts_cutted  = Utils_concat.full_sentence_to_ctx_and_crt(full_snt)
+    print(len(matrices))
 
+    if len(snts_cutted)>= 2:
+        matrice = Matrice(torch.Tensor(matrices).transpose(0,1))
+        print(f"len snts_cutted: {[len(snt) for snt in snts_cutted]} -> {sum([len(snt) for snt in snts_cutted])}")
+        print(f"matrice.size(): {matrice.size()}")
+        return {'identifiant': identifiant,
+                'snt_cutted': snts_cutted,
+                'layers': matrice}
+    else:
+        return None
 
 if __name__ == '__main__':
     import doctest
