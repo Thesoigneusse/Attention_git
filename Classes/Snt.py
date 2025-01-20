@@ -154,7 +154,7 @@ class Snt:
             elif flag:
                 liste_bpe.append(i+1)
                 flag = False
-        return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else None
+        return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else []
         # return [ i for i in range(len(tokens) -1, -1, -1) if tokens[i].endswith(BPE_mark) ]
 
     def append(self, value: str):
