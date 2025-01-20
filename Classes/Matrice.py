@@ -1,4 +1,5 @@
 import torch
+from typing import List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
@@ -136,6 +137,26 @@ class Matrice(torch.Tensor):
                 self[self < 1/value] = 0
             else:
                 raise NotImplementedError(f"suppr_inf ne supporte pas la suppression uniforme avec la méthode: '{medium}'")
+
+    def suppr_pad(self, row_list_suppr_pad: List[int] = None, col_list_suppr_pad: List[int] = None) -> None:
+        """Supprime les valeurs correspondant aux tokens de padding.
+
+        Args:
+            list_suppr_pad (List[int]): Liste décroissante des index des tokens à supprimer
+        """
+        if row_list_suppr_pad is not None:
+            assert isinstance(row_list_suppr_pad, list), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad)}"
+            assert all([isinstance(index, int) for index in row_list_suppr_pad]), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(row_list_suppr_pad[0])}"
+            row_list_suppr_pad.sort(reverse=True)
+            colonnes_a_conserver = [i for i in range(self.shape[1]) if i not in row_list_suppr_pad]
+            self = self[:, colonnes_a_conserver]
+        if col_list_suppr_pad is not None:
+            assert isinstance(col_list_suppr_pad, list), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad)}"
+            assert all([isinstance(index, int) for index in col_list_suppr_pad]), f"list_suppr_pad doit être une liste de nombres entiers. Current type: {type(col_list_suppr_pad[0])}"
+            temp = self.transpose(0,1)
+            col_list_suppr_pad.sort(reverse=True)
+            colonnes_a_conserver = [i for i in range(temp.shape[0]) if i not in col_list_suppr_pad]
+            self = temp[:, colonnes_a_conserver].transpose(0,1)
 
     def ecriture_xslx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
         """Écrit la matrice au format xslx
