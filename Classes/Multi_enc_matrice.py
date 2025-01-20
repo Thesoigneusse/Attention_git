@@ -82,6 +82,39 @@ class Multi_enc_matrice(CA_matrice):
         for sl_head in range(len(self.sl_heads)):
             self.sl_heads[sl_head].norm_tensor()
 
+    def get_full_ctxs(self) -> Snt:
+        """Retourne le contexte sous forme d'une seule Snt.
+
+        Returns:
+            Snt: Snt représentant l'ensemble du contexte. L'identifiant correspond à l'identifiant du contexte 
+                    le plus éloigné de la phrase courante
+        """
+        ctxs = Snt(identifiant=self.crt.identifiant, tokens= [])
+        for k in range(len(self.ctxs)):
+            ctxs += self.ctxs[k]
+            ctxs.identifiant -= 1
+        return ctxs
+
+    def get_crt_to_ctxs(self, medium: str = 'full'):
+        """Retourne une Matrice entre la phrase courante et les phrases de contextes
+
+        Returns:
+            Matrice: Matrice entre la phrase courante et les phrases de contextes
+        """
+        matrices =  []
+        mean_tl_head = self.mean_ctxs_heads() if medium == 'tl_mean' else None
+        mean_sl_head = self.mean_sl_heads() if medium == 'sl_mean' else None
+        
+        for h_sl in range(len(self.sl_heads)):
+            contextualised_matrices = []
+            if medium == 'full':
+                for h_tl in range(len(self.ctxs_heads[0])):
+                    contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ self.ctxs_heads[k][h_tl] for k in range(len(self.sl_heads[h_sl].size(dim = 1)))]))
+            elif mean_tl_head is not None:
+                contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ mean_tl_head[k][h_tl] for k in range(len(self.sl_heads[h_sl].size(dim = 1)))]))
+            matrices.append(contextualised_matrices)
+        return Matrice(matrices)
+
     def mean_ctxs_heads(self) -> List[Matrice]:
         from Utils import Utils
         mean_ctxs_heads = []
