@@ -254,7 +254,7 @@ def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], ful
                 del snt_cutted[i]
                 for layer in range(len(layers)):
                     for head in range(len(layers[layer])):
-                        layers[layer][head].matrice = torch.cat([layers[layer][head].matrice[1:, 1:]])
+                        layers[layer][head] = torch.cat([layers[layer][head][1:, 1:]])
 
         full_ctx = ctxs[0].copy() # Snt(identifiant= identifiant - len(ctxs), tokens= ctxs[0].tokens)
         if len(ctxs) > 1:
