@@ -92,6 +92,8 @@ def lecture_multi_enc_objet(data):
     """
     # print(data.keys())
     from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
+    from Classes.Sl_matrice import Sl_matrice
     # phrase courante
     crt = Snt(identifiant= int(data["id"]), tokens= data["crt"])
     
@@ -102,7 +104,7 @@ def lecture_multi_enc_objet(data):
         ctxs.append(Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
         heads = []
         for h in range(len(data["heads"][0])):
-            heads.append(Matrice(matrice = torch.DoubleTensor(data["heads"][k][h])))
+            heads.append(Matrice(data["heads"][k][h]))
         ctxs_heads.append(heads)
     correction_eos_context(ctxs)
     correction_eos_crt(crt)
@@ -110,7 +112,7 @@ def lecture_multi_enc_objet(data):
     # sentence level heads
     sl_heads = []
     for h in range(len(data["SL_matrice"])):
-        sl_heads.append(Sl_matrice(matrice = torch.DoubleTensor(data["SL_matrice"][h]).squeeze()))
+        sl_heads.append(Sl_matrice(data["SL_matrice"][h]).squeeze())
 
 
     return (crt, ctxs, ctxs_heads, sl_heads)
