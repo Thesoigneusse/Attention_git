@@ -50,17 +50,15 @@ class Multi_enc_matrice(CA_matrice):
         """
         # On récupère les positions des tokens de paddings dans la phrase source et de contexte
         list_crt_suppr_pad, list_ctx_suppr_pad = self.sentences_suppr_pad(padding_mark=padding_mark)
-        print(f"list_crt_suppr_pad: {list_crt_suppr_pad}")
-        print(f"list_ctx_suppr_pad: {list_ctx_suppr_pad}")
 
         # On supprime les poids correspondant aux tokens de padding dans les têtes token-level
         for k in range(len(self.ctxs)):
             for head in range(len(self.ctxs_heads[k])):
-                self.ctxs_heads[k][head].suppr_pad(row_list_suppr_pad= list_crt_suppr_pad, col_list_suppr_pad=  list_ctx_suppr_pad[k])
+                self.ctxs_heads[k][head] = self.ctxs_heads[k][head].suppr_pad(row_list_suppr_pad= list_crt_suppr_pad, col_list_suppr_pad=  list_ctx_suppr_pad[k])
 
         # On supprime les poids correspondant aux tokens de padding dans les têtes sentence-level
         for sl_head in range(len(self.sl_heads)):
-            self.sl_heads[sl_head].suppr_pad(row_list_suppr_pad= list_crt_suppr_pad)
+            self.sl_heads[sl_head] = self.sl_heads[sl_head].suppr_pad(row_list_suppr_pad= list_crt_suppr_pad)
 
     def fusion_bpe(self, BPE_mark: str = '@@'):
         """Fusion des tokens BPE dans les matrices de chaque contexte.
@@ -70,19 +68,19 @@ class Multi_enc_matrice(CA_matrice):
         # On fusionne les poids correspondant aux BPEs dans les têtes token-level
         for k in range(len(self.ctxs)):
             for head in range(len(self.ctxs_heads[k])):
-                self.ctxs_heads[k][head].fusion_bpe(row_list_fusion_bpe= list_crt_fusion_bpe, col_list_fusion_bpe=  list_ctx_fusion_bpe[k])
+                self.ctxs_heads[k][head] = self.ctxs_heads[k][head].fusion_bpe(row_list_groupes= list_crt_fusion_bpe, col_list_groupes=  list_ctx_fusion_bpe[k])
 
         # On fusionne les poids correspondant aux BPEs dans les têtes sentence-level
         for sl_head in range(len(self.sl_heads)):
-            self.sl_heads[sl_head].fusion_bpe(row_list_fusion_bpe= list_crt_fusion_bpe)
+            self.sl_heads[sl_head] = self.sl_heads[sl_head].fusion_bpe(row_list_groupes= list_crt_fusion_bpe)
 
     def clean_matrice(self):
         for k in range(len(self.ctxs)):
             for head in range(len(self.ctxs_heads[k])):
-                self.ctxs_heads[k][head].suppr_inf(medium="inf_uniform")
-                self.ctxs_heads[k][head].norm_tensor(medium="max")
+                self.ctxs_heads[k][head].suppr_inf(medium="suppr_inf_uniform")
+                self.ctxs_heads[k][head].norm_tenseur(medium="max")
         for sl_head in range(len(self.sl_heads)):
-            self.sl_heads[sl_head].norm_tensor()
+            self.sl_heads[sl_head].norm_tenseur()
 
     def get_full_ctxs(self) -> Snt:
         """Retourne le contexte sous forme d'une seule Snt.
@@ -111,9 +109,9 @@ class Multi_enc_matrice(CA_matrice):
             contextualised_matrices = []
             if medium == 'full':
                 for h_tl in range(len(self.ctxs_heads[0])):
-                    contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ self.ctxs_heads[k][h_tl] for k in range(len(self.sl_heads[h_sl].size(dim = 1)))]))
+                    contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ self.ctxs_heads[k][h_tl] for k in range(self.sl_heads[h_sl].size(dim = 1))]))
             elif mean_tl_head is not None:
-                contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ mean_tl_head[k][h_tl] for k in range(len(self.sl_heads[h_sl].size(dim = 1)))]))
+                contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ mean_tl_head[k][h_tl] for k in range(self.sl_heads[h_sl].size(dim = 1))]))
             matrices.append(contextualised_matrices)
         return Matrice(matrices)
 
