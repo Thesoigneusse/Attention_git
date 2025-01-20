@@ -18,7 +18,7 @@ for id in range(2308):
     _SRC = True
     _TO_PROCESS = "crt_to_ctxs"
     print(f"[DEBUG] id: {id}")
-    r_path=f"/home/getalp/lopezfab/lig/temp/temp/test_attn/{id}.json"
+    r_path=f"/home/getalp/lopezfab/temp/temp/test_attn/{id}.json"
     data=Utils_data.lecture_data(r_path)
     data = Utils_data.lecture_concat_objet(data)
     # print(f"[debug] data.keys: {data.keys()}")
