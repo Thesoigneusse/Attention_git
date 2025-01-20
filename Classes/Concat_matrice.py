@@ -61,8 +61,8 @@ class Concat_matrice(CA_matrice):
 
         for i_layer in range(len(self.layers)):
             for h_head in range(len(self.layers[i_layer])):
-                self.layers[i_layer][h_head] = self.layers[i_layer][h_head].fusion_bpe(groupes=snt_list_fusion_bpe)
-                self.layers[i_layer][h_head] = self.layers[i_layer][h_head].transpose(0,1).fusion_bpe(groupes=snt_list_fusion_bpe).transpose(0,1)
+                self.layers[i_layer][h_head] = self.layers[i_layer][h_head].fusion_bpe(row_list_groupes=snt_list_fusion_bpe, col_list_groupes=snt_list_fusion_bpe)
+                # self.layers[i_layer][h_head] = self.layers[i_layer][h_head].transpose(0,1).fusion_bpe(groupes=snt_list_fusion_bpe).transpose(0,1)
         return {'crt': row_list_fusion_bpe, 'ctxs': col_list_fusion_bpe}
 
     def norm_tensor(self, data_to_norm= "cutted_matrices", medium = "minmax") -> None:
