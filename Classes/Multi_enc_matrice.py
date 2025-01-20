@@ -50,6 +50,8 @@ class Multi_enc_matrice(CA_matrice):
         """
         # On récupère les positions des tokens de paddings dans la phrase source et de contexte
         list_crt_suppr_pad, list_ctx_suppr_pad = self.sentences_suppr_pad(padding_mark=padding_mark)
+        print(f"list_crt_suppr_pad: {list_crt_suppr_pad}")
+        print(f"list_ctx_suppr_pad: {list_ctx_suppr_pad}")
 
         # On supprime les poids correspondant aux tokens de padding dans les têtes token-level
         for k in range(len(self.ctxs)):
@@ -64,7 +66,7 @@ class Multi_enc_matrice(CA_matrice):
         """Fusion des tokens BPE dans les matrices de chaque contexte.
         """
         list_crt_fusion_bpe, list_ctx_fusion_bpe = self.sentences_fusion_bpe(BPE_mark=BPE_mark)
-
+        print(f"list_ctx_fusion_bpe: {list_ctx_fusion_bpe}")
         # On fusionne les poids correspondant aux BPEs dans les têtes token-level
         for k in range(len(self.ctxs)):
             for head in range(len(self.ctxs_heads[k])):
@@ -104,7 +106,7 @@ class Multi_enc_matrice(CA_matrice):
         matrices =  []
         mean_tl_head = self.mean_ctxs_heads() if medium == 'tl_mean' else None
         mean_sl_head = self.mean_sl_heads() if medium == 'sl_mean' else None
-        
+
         for h_sl in range(len(self.sl_heads)):
             contextualised_matrices = []
             if medium == 'full':
