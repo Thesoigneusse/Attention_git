@@ -113,7 +113,7 @@ class Multi_enc_matrice(CA_matrice):
             elif mean_tl_head is not None:
                 contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ mean_tl_head[k][h_tl] for k in range(self.sl_heads[h_sl].size(dim = 1))]))
             matrices.append(contextualised_matrices)
-        return Matrice(matrices)
+        return matrices
 
     def mean_ctxs_heads(self) -> List[Matrice]:
         from Utils import Utils

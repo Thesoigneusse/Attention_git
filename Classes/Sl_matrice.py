@@ -34,16 +34,16 @@ class Sl_matrice(Matrice):
             Matrice: matrice contextualisée des 3 matrices words-level avec la matrice sentence-level
         """
         assert isinstance(other, List), f"other must be an instance of Matrice. Current type: {type(other)}"
-        assert self.matrice.size(0) == other[0].matrice.size(0), f"The number of rows of the Sl_matrice must be equal to the number of rows of the Matrice. Current shape: {self.matrice.size()}, {other[0].matrice.size()}"
-        assert self.matrice.size(1) == len(other), f"The number of columns of the Sl_matrice must be equal to the number of columns of the Matrice. Current shape: {self.matrice.size()}, {other.matrice.size()}"
+        assert self.size(0) == other[0].size(0), f"The number of rows of the Sl_matrice must be equal to the number of rows of the Matrice. Current shape: {self.size()}, {other[0].size()}"
+        assert self.size(1) == len(other), f"The number of columns of the Sl_matrice must be equal to the number of columns of the Matrice. Current shape: {self.size()}, {other.size()}"
 
         full_matrice = []
-        for t in range(self.matrice.size(0)):
+        for t in range(self.size(0)):
             # pour t le nombre de tokens dans la phrase courante (ligne de sl_matrice & de chaque matrice)
             temp_ctxs = []
-            for k in range(self.matrice.size(1)):
-                # pour k le nombre de contexte(colonne de self.matrice)
-                temp_ctxs.append(torch.Tensor(other[k].matrice[t, ...] * self.matrice[t, k]))
+            for k in range(self.size(1)):
+                # pour k le nombre de contexte(colonne de self)
+                temp_ctxs.append(torch.Tensor(other[k][t, ...] * self[t, k]))
             # print(f"{[ctx.size() for ctx in temp_ctxs]}")
             full_matrice.append(torch.cat(temp_ctxs, dim=0))
 
