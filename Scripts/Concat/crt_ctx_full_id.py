@@ -13,6 +13,8 @@ from Utils import Utils_concat
 from Utils import Utils_data
 from Classes.Concat_matrice import Concat_matrice
 import torch
+torch.no_grad()
+
 
 for id in range(2308):
     _SRC = True
