@@ -13,7 +13,7 @@ precision = 8
 for id in range(2308):
     print(f"sentence : {id}")
     precision = 8
-    r_path=f"/home/getalp/lopezfab/lig/temp/temp/temp/han_attn2/{id}.json"
+    r_path=f"/home/getalp/lopezfab/temp/temp/temp/han_attn2/{id}.json"
     OUTPUT_PATH = f"/home/getalp/lopezfab/Documents/multi_enc/{id}"
 
     # Lecture des données
