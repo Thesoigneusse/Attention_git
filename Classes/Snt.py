@@ -1,10 +1,9 @@
-import json
 from typing import List
 import copy
 
 
 class Snt:
-    def __init__(self, identifiant: int, tokens: List[str]):
+    def __init__(self, identifiant: int = None, tokens: List[str] = None):
         """Représente une phase.
 
         Args:
@@ -25,7 +24,8 @@ class Snt:
         return self.__json__()
 
     def __str__(self):
-        return f"Snt(id={self.identifiant}, tokens={self.tokens})"
+        return str(self.__json__())
+        # return f"Snt(id={self.identifiant}, tokens={self.tokens})"
 
     def __len__(self):
         return len(self.tokens)
@@ -34,8 +34,24 @@ class Snt:
         return str(self.__dict__)
 
     def __add__(self, other):
-        assert isinstance(other, Snt), f"other must be an instance of Snt. Current type: {type(other)}"
-        return Snt(identifiant=-1, tokens=self.tokens + other.tokens)
+        assert isinstance(other, Snt) or (isinstance(other, list) and all([isinstance(val, str) for val in other])), f"other must be an instance of Snt or a List[str]. Current type: {type(other)}"
+        if isinstance(other, Snt):
+            return Snt(identifiant=self.identifiant, tokens=self.tokens + other.tokens)
+        elif isinstance(other, list):
+            return Snt(identifiant=self.identifiant, tokens=self.tokens + other)
+
+    def __mul__(self, other):
+        assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
+
+    def copy(self):
+        from copy import copy
+        return copy(self)
+        if isinstance(other, int) and other > 0:
+            from copy import copy
+            res = []
+            for i in range(other):
+                res.append(copy(self))
+            return res
 
     @property
     def tokens(self) -> List[str]:
@@ -53,8 +69,9 @@ class Snt:
         Args:
             value (List[str]): list of token of the sentence
         """
-        assert isinstance(tokens, list), f"token must be a list. Current type: {type(tokens)}"
-        assert all(isinstance(tok, str) for tok in tokens), f"token must be a list of str. Current type: {[type(tok) for tok in tokens]}"
+        if not isinstance(tokens, type(None)):
+            assert isinstance(tokens, list), f"token must be a list. Current type: {type(tokens)}"
+            assert all(isinstance(tok, str) for tok in tokens), f"token must be a list of str. Current type: {[type(tok) for tok in tokens]}"
         self._tokens = copy.copy(tokens)
 
     @property
@@ -74,17 +91,13 @@ class Snt:
         Args:
             identifiant (int): unique identifiant of the sentence (>=0 or ==-1).
         """
-        assert isinstance(identifiant, int), \
-            f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
+        if not isinstance(identifiant, type(None)):
+            assert isinstance(identifiant, int), f"identifiant must be an int. Current type | Current value: {type(identifiant)} | {identifiant }"
         self._identifiant = identifiant
 
-    def toJSON(self):
-        import json
-        return json.dumps(
-            self,
-            default=lambda o: o.__dict__,
-            sort_keys=True,
-            indent=4)
+    @staticmethod
+    def len(self) -> int:
+        return len(self.tokens)
 
     @staticmethod
     def list_suppr_pad(tokens, padding_mark="<pad>", strict=False)-> List[int]:
@@ -113,6 +126,84 @@ class Snt:
                 list_suppr_pad.append(i)
         return list_suppr_pad
 
+    @staticmethod
+    def list_fusion_bpe(tokens: List[str], BPE_mark: str = '@@') -> List[int] :
+        """retourne la liste décroissante des tokens contenant une marque de BPE à la fin
+
+        Returns:
+            List[int]: liste décroissante des tokens contenant une marque de BPE à la fin
+        >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        [[6, 5], [1, 0]]
+        >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
+        [[3, 2, 1, 0]]
+        >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
+        """
+        assert isinstance(tokens, list), f"tokens must be a list. Current type: {type(tokens)}"
+        assert all(isinstance(tok, str) for tok in tokens), f"tokens must be a list of str. Current type: {[type(tok) for tok in tokens]}"
+        assert isinstance(BPE_mark, str), f"BPE_mark must be a str. Current type: {type(BPE_mark)}"
+        assert tokens, "Liste vide"
+        assert not tokens[-1].endswith(BPE_mark), f"Dernier token contenant une marque de BPE. Sentence: {tokens}"
+        from Utils import Utils
+
+        liste_bpe = []
+        flag = False
+        for i in range(len(tokens)-1, -2, -1):
+            if tokens[i].endswith(BPE_mark):
+                flag = True
+                liste_bpe.append(i+1)
+            elif flag:
+                liste_bpe.append(i+1)
+                flag = False
+        return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else []
+        # return [ i for i in range(len(tokens) -1, -1, -1) if tokens[i].endswith(BPE_mark) ]
+
+    def append(self, value: str):
+        """Ajoute un (ou plusieurs via liste) token(s) à la fin de la phrase
+
+        Args:
+            value (str or List[str]): token ou liste à ajouter à la fin de la phrase
+        
+        Tests:
+        >>> s1 = Snt(identifiant= 3, tokens= ['Ce@@', 'ci', 'est', '<pad>', 'un'])
+        >>> s1.append('test')
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['Ce@@', 'ci', 'est', '<pad>', 'un', 'test']}
+        >>> s1 = Snt(identifiant= 3, tokens= ['Ce@@', 'ci', 'est', 'test', '<pad>', 'un'])
+        >>> s1.append(['test1', 'test2'])
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['Ce@@', 'ci', 'est', 'test', '<pad>', 'un', 'test1', 'test2']}
+        """
+        assert isinstance(value, str) or (isinstance(value, list) and all([isinstance(val, str) for val in value])), f"[DEBUG] Snt().append only supports strings and List[string]. Current type : {type(value)}"
+        if isinstance(value, str):
+            self.tokens.append(value)
+        elif isinstance(value, List):
+            self.tokens += value
+    
+    def insert(self, index: int, value) -> None:
+        """Insert value en position index dans la liste de tokens
+
+        Args:
+            index (int): position de l'index où inserer value
+            value (str): token unique à insérer
+        
+        Tests:
+        >>> s1 = Snt(identifiant= 3, tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+        >>> s1.insert(0, "test")
+        >>> print(s1)
+        {'_identifiant': 3, '_tokens': ['test', 'Ce@@', 'ci', 'est', '<pad>', 'un', 'te@@', 'st', '.', '<eos>']}
+        """
+        assert isinstance(index, int), f"index must be an int. Current type: {type(index)}"
+        assert isinstance(value, str), f"value must be a str. Current type: {type(value)}"
+        self.tokens.insert(index, value)
+
+    def toJSON(self):
+        import json
+        return json.dumps(
+            self,
+            default=lambda o: o.__dict__,
+            sort_keys=True,
+            indent=4)
+
     def suppr_pad(self, list_index: List[int] = None, padding_mark='<pad>', strict=False) -> List[int]:
         """Supprime le padding de la phrase et retourne une liste contenant les index supprimés
 
@@ -138,38 +229,6 @@ class Snt:
             del self.tokens[i]
         return list_index
 
-    @staticmethod
-    def list_fusion_bpe(tokens: List[str], BPE_mark: str = '@@') -> List[int] :
-        """retourne la liste décroissante des tokens contenant une marque de BPE à la fin
-
-        Returns:
-            List[int]: liste décroissante des tokens contenant une marque de BPE à la fin
-        >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-        [[6, 5], [1, 0]]
-        >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
-        [[3, 2, 1, 0]]
-        >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
-        None
-        """
-        assert isinstance(tokens, list), f"tokens must be a list. Current type: {type(tokens)}"
-        assert all(isinstance(tok, str) for tok in tokens), f"tokens must be a list of str. Current type: {[type(tok) for tok in tokens]}"
-        assert isinstance(BPE_mark, str), f"BPE_mark must be a str. Current type: {type(BPE_mark)}"
-        assert tokens, "Liste vide"
-        assert not tokens[-1].endswith(BPE_mark), f"Dernier token contenant une marque de BPE. Sentence: {tokens}"
-        import Utils
-
-        liste_bpe = []
-        flag = False
-        for i in range(len(tokens)-1, -2, -1):
-            if tokens[i].endswith(BPE_mark):
-                flag = True
-                liste_bpe.append(i+1)
-            elif flag:
-                liste_bpe.append(i+1)
-                flag = False
-        return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else None
-        # return [ i for i in range(len(tokens) -1, -1, -1) if tokens[i].endswith(BPE_mark) ]
-    
     def fusion_bpe(self, list_bpe: List[int] = None, BPE_mark: str = '@@') -> List[int]:
         """Fusionne les tokens BPEisés
 
@@ -184,7 +243,7 @@ class Snt:
         >>> snt3.fusion_bpe()
         [[3, 2, 1, 0]]
         >>> print(snt3)
-        Snt(id=2, tokens=['lubulule', '.', '<eos>'])
+        {'_identifiant': 2, '_tokens': ['lubulule', '.', '<eos>']}
         """
         groupes_bpe = Snt.list_fusion_bpe(self.tokens, BPE_mark=BPE_mark) if list_bpe is None else list_bpe
         
@@ -198,18 +257,25 @@ class Snt:
 
         return groupes_bpe
     
-
+    def test_(self, _id = 0):
+        print(f"[DEBUG] Production d'une Snt de Test")
+        self.identifiant = _id
+        self.tokens = [f"{_id}", "Pro", "Duc", "tion", "d'", "une", "Snt", "de", "test", "."]
 
 
 if __name__ == "__main__":
     import doctest
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
     doctest.testmod()
-    print()
+    # print()
 
-    print(Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="<pad>", strict=True))
+    # print(Snt.list_suppr_pad(["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], padding_mark="<pad>", strict=True))
 
-    s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
-    print(s2.suppr_pad(strict=True))
+    # s2 = Snt(identifiant= 3, tokens= ["<pad>", "<pad>", "<pad>", "Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"])
+    # print(s2.suppr_pad(strict=True))
     # s1 = Snt(2, tokens=["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
     # liste = Snt.list_fusion_bpe(s1.tokens)
     # s1.fusion_bpe(liste)

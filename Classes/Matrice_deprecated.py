@@ -1,13 +1,14 @@
 import torch
 from typing import List
 from typing import Callable
-import action_norm_tensor as ant
-from Snt import Snt
-import action_fusion_bpe as afb
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Classes.Snt import Snt
+
 
 class Matrice():
-    def __init__(self, matrice: torch.Tensor) -> None:
-        if not isinstance(matrice, torch.Tensor):
+    def __init__(self, matrice: torch.Tensor = None) -> None:
+        if isinstance(matrice, list):
             matrice = torch.Tensor(matrice)
         self.matrice = matrice
 
@@ -16,6 +17,7 @@ class Matrice():
         return self._matrice
     @matrice.setter
     def matrice(self, matrice: torch.Tensor) -> None:
+        assert isinstance(matrice, torch.Tensor) or isinstance(matrice, type(None)), f"matrice must be a torch.Tensor or None. Current type: {type(matrice)}"
         self._matrice = matrice
 
     def __json__(self) -> str:
@@ -23,6 +25,33 @@ class Matrice():
 
     def __repr__(self) -> str:
         return self.__json__()
+
+    def __mul__(self, other):
+        assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
+        if isinstance(other, int) and other > 0:
+            from copy import copy
+            res = []
+            for i in range(other):
+                res.append(copy(self))
+            return res
+
+    def size(self, dim = None):
+        """Retourne la size du self.matrice. 
+        Si dim n'est pas spécifier, retourne un torch.Size sinon retourne un int correspondant à la taille de la dimension
+
+        Args:
+            dim (int, optional): La dimension pour laquelle on cherche la taille. Defaults to None.
+
+        Returns:
+            tuple or int: Si dim n'est pas spécifier, retourne un torch.Size sinon retourne un int correspondant à la taille de la dimension
+        """
+        assert dim is None or isinstance(dim, int), f"Si dim est spécifier alors il doit s'agir d'un int. Current type: {type(dim)}"
+        return self.matrice.size(dim=dim)
+
+    def copy(self):
+        from copy import copy
+        return copy(self)
+
 
     # Padding Suppression
     @staticmethod
@@ -86,6 +115,7 @@ class Matrice():
             torch.Tensor: Résultat de l'action appliquée à toutes les lignes
         TODO: faire un doctest
         """
+        import Utils.action_fusion_bpe as afb
         result = None
         if action == "max":
             result = afb.max(rows)
@@ -152,12 +182,16 @@ class Matrice():
         >>> Matrice.action_norm_tensor(torch.DoubleTensor([0,2,3,4,5,6]), medium = "minmax")
         tensor([0.0000, 0.0000, 0.2500, 0.5000, 0.7500, 1.0000], dtype=torch.float64)
         """
-        if medium =="minmax":
-            return ant.norm_by_min_max(row)
-        elif medium == "max":
-            return ant.norm_by_max(row)
-        else:
-            raise ValueError(f"medium doit être 'minmax' ou'max'. Current value: {medium}")
+        import Utils.action_norm_tensor as ant
+        action = {"minmax": ant.norm_by_min_max,
+                    "max": ant.norm_by_max}
+        return action[medium](row)
+        # if medium =="minmax":
+        #     return ant.norm_by_min_max(row)
+        # elif medium == "max":
+        #     return ant.norm_by_max(row)
+        # else:
+        #     raise ValueError(f"medium doit être 'minmax' ou'max'. Current value: {medium}")
 
     def norm_tensor(self, precision: int = 3, medium="minmax"): 
         """Normalise les poids de la matrice
@@ -230,7 +264,7 @@ class Matrice():
                     assert value is not None and isinstance(value, int), f"avec l'option value, clean_matrice doit recevoir une valeur"
                     self.matrice[self.matrice < 1/value] = 0
 
-    def ecriture_xslx(self, crt: Snt, ctx: Snt, absolute_folder, filename, precision = 2, create_folder_path = False):
+    def ecriture_xslx(self, crt: "Snt", ctx: "Snt", absolute_folder, filename, precision = 2, create_folder_path = False):
         """Écrit la matrice au format xslx
 
         Args:
@@ -247,7 +281,7 @@ class Matrice():
         pour ne garder que les deniers chiffres significatifs voulus.
         """
         # Check the path
-        import Utils_data
+        from Utils import Utils_data
         Utils_data.check_path(absolute_folder=absolute_folder, create_folder_path=create_folder_path)
         import xlsxwriter
         workbook = xlsxwriter.Workbook(f"{absolute_folder}/{filename}.xlsx")
@@ -257,7 +291,8 @@ class Matrice():
         highlight_format = workbook.add_format({'bg_color': 'cyan', 'bold': True})
 
         # Ecritures des phrases respectivement courante et de contexte
-        worksheet.write(0,0, f"{crt.identifiant}-k{str(int(crt.identifiant) - int(ctx.identifiant))}")
+        # worksheet.write(0,0, f"{crt.identifiant}-k{str(int(crt.identifiant) - int(ctx.identifiant))}")
+        worksheet.write(0,0, f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}")
         for row_idx, tok in enumerate(crt.tokens, start=1):
             worksheet.write(row_idx, 0, tok)
         for col_idx, tok in enumerate(ctx.tokens, start=1):
@@ -275,11 +310,23 @@ class Matrice():
                     worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
         workbook.close()
 
+    def test_(self, size = [10,10]):
+        """Produit une matrice carrée de taille 10x10
 
+        Returns:
+            torch.DoubleTensor: un tensor de taille 10x10 arrondi à 2 décimales
+        """
+        print(f"[DEBUG] Production d'une Matrice de Test")
+        self.matrice = torch.zeros(*size).random_(0, 10).round(decimals = 2)
 
 
 if __name__ == '__main__':
     import doctest
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # sys.path.append("..")
+    
     doctest.testmod()
     print(f"[DEBUG] Doctest clear")
     

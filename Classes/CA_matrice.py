@@ -1,8 +1,9 @@
 # Une matrice context aware qui prend en entrée les différents éléments d'une matrice context-aware
 from abc import abstractmethod
-from Matrice import Matrice
-from Snt import Snt
 from typing import List
+import torch
+from Classes.Matrice import Matrice
+from Classes.Snt import Snt
 # N : taille de la phrase courante
 # k : nombre de phrase de contexte
 # M_k : Taille de la phrase de contexte k
@@ -11,7 +12,7 @@ from typing import List
 # L : nombre de layers
 
 class CA_matrice():
-    def __init__(self, crt: Snt, ctxs: List[Snt], full_matrice: List[Matrice] = None):
+    def __init__(self, crt: Snt = None, ctxs: List[Snt] = None, full_matrice: List[Matrice] = None):
         # Phrase courante
         # Dimension : N
         self.crt = crt
@@ -33,7 +34,8 @@ class CA_matrice():
         return self._crt
     @crt.setter
     def crt(self, value: Snt) -> None:
-        assert isinstance(value, Snt), f"Sentence must be a Snt. Current Value: {type(value)}"
+        if not isinstance(value, type(None)):
+            assert isinstance(value, Snt), f"Sentence must be a Snt. Current Value: {type(value)}"
         self._crt = value
 
     @property
@@ -46,8 +48,10 @@ class CA_matrice():
         return self._ctxs
     @ctxs.setter
     def ctxs(self, value: List[Snt]) -> None:
-        assert isinstance(value, list), f"ctxs must be a list. Current Value: {type(value)}"
-        assert all(isinstance(snt, Snt) for snt in value), f"ctxs must be a list of Snt. Current Value: {[type(snt) for snt in value]}"
+        if not isinstance(value, type(None)):
+            assert isinstance(value, list), f"ctxs must be a list. Current Value: {type(value)}"
+            if not all(isinstance(snt, type(None)) for snt in value):
+                assert all(isinstance(snt, Snt) for snt in value), f"ctxs must be a list of Snt. Current Value: {[type(snt) for snt in value]}"
         self._ctxs = value
 
     @property
@@ -60,8 +64,8 @@ class CA_matrice():
         return self._heads
     @full_matrice.setter
     def full_matrice(self, value: List[Matrice]) -> None:
-        if value is not None:
-            assert isinstance(value, list), f"heads must be a list. Current Value: {type(value)}"
+        if not isinstance(value, type(None)):
+            assert isinstance(value, list) or isinstance(value, torch.Tensor), f"heads must be a list. Current Value: {type(value)}"
             assert all(isinstance(head, Matrice) for head in value), f"heads must be a list of Matrice. Current Value: {[type(head) for head in value]}"
         self._heads = value
 
@@ -144,10 +148,21 @@ class CA_matrice():
         raise NotImplementedError(f"Need to implement ecriture_xslx from CA_matrice")
         pass
 
+    def test_(self):
+        s1 = Snt()
+        s1.test_(0)
+        self.crt = s1
+        self.ctxs = s1 * 3
+        for k in range(0, len(self.ctxs)):
+            self.ctxs[k].identifiant = len(self.ctxs) - k
+        m = Matrice()
+        m.test_()
+        self.full_matrice = [m for _ in range(1,4)]
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    import Utils_data
+    from Utils import Utils_data
 
     id = 1850
     r_path=f"/home/getalp/lopezfab/lig/temp/temp/temp/han_attn2/{id}.json"

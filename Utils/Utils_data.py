@@ -2,9 +2,11 @@ import json
 import torch
 from typing import List
 import copy
-from Snt import Snt
-from Matrice import Matrice
-from Sl_matrice import Sl_matrice
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
+    from Classes.Sl_matrice import Sl_matrice
 
 def lecture_data(absolute_file_path):
     """Read the data into the absolute_path file
@@ -23,7 +25,7 @@ def lecture_data(absolute_file_path):
         data = json.load(f)
     return data
 
-def ecriture_tsv(matrice: Matrice, crt: Snt, ctx: Snt, absolute_folder:str, filename:str):
+def ecriture_tsv(matrice: "Matrice", crt: "Snt", ctx: "Snt", absolute_folder:str, filename:str):
     """Écrit la matrice au format tsv à l'emplacement "{absolute_folder}/filename"
 
     Args:
@@ -37,7 +39,7 @@ def ecriture_tsv(matrice: Matrice, crt: Snt, ctx: Snt, absolute_folder:str, file
     with open(f"{absolute_folder}/{filename}.tsv", "w") as f:
         f.write("\n".join("\t".join(str(colonne) for colonne in ligne) for ligne in matrice_snts))
 
-def mise_en_forme_matricielle(_matrice: Matrice, _crt: Snt, _ctx: Snt, precision = 2) -> list:
+def mise_en_forme_matricielle(_matrice: "Matrice", _crt: "Snt", _ctx: "Snt", precision = 2) -> list:
     """Convertie une matrice ainsi que les phrases courante (de longueur n) et de contexte (de longueur m) en une matrice n x m au format:
     [[id_crt-id-ctx, ctx[0], ctx[1], ..., ctx[m]       ],
      [    crt[0]   , w_0_0 , w_1_0,  ...               ],
@@ -88,8 +90,10 @@ def lecture_multi_enc_objet(data):
     Args:
         data (str): json objet
     """
-    print(data.keys())
-    
+    # print(data.keys())
+    from Classes.Snt import Snt
+    from Classes.Matrice import Matrice
+    from Classes.Sl_matrice import Sl_matrice
     # phrase courante
     crt = Snt(identifiant= int(data["id"]), tokens= data["crt"])
     
@@ -100,7 +104,7 @@ def lecture_multi_enc_objet(data):
         ctxs.append(Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
         heads = []
         for h in range(len(data["heads"][0])):
-            heads.append(Matrice(matrice = torch.DoubleTensor(data["heads"][k][h])))
+            heads.append(Matrice(data["heads"][k][h]))
         ctxs_heads.append(heads)
     correction_eos_context(ctxs)
     correction_eos_crt(crt)
@@ -108,46 +112,49 @@ def lecture_multi_enc_objet(data):
     # sentence level heads
     sl_heads = []
     for h in range(len(data["SL_matrice"])):
-        sl_heads.append(Sl_matrice(matrice = torch.DoubleTensor(data["SL_matrice"][h]).squeeze()))
+        sl_heads.append(Sl_matrice(data["SL_matrice"][h]).squeeze())
 
 
     return (crt, ctxs, ctxs_heads, sl_heads)
 
-def lecture_concat_objet(data):
-    """prends en entrée un json objet de la lecture de données d'un modèle concat et retourne les éléments contenu
+def lecture_concat_objet(data) -> dict:
+    """prends en entrée un json objet de la lecture de données d'un modèle concat et retourne les éléments contenus
 
     Args:
-        data (str): json objet
+        data (dict): {
+                      'id': identifiant de la phrase courante,
+                      'src_tokens': tokens source des phrase ctxs + crt,
+                      'tgt_tokens': tokens target des phrase ctxs + crt,
+                      'heads_enc_attn': matrice des poids des layers et tête d'attention (snts x snts) côté source,
+                      'heads_dec_attn': matrice des poids des layers et tête d'attention (snts x snts) côté target
+                      }
     """
-    print(data.keys())
-    
-    # phrase courante
-    crt = Snt(identifiant= int(data["id"]), tokens= data["crt"])
-    
-    # phrases de contexte
-    ctxs = []
-    ctxs_heads = []
-    for k in range(len(data["ctxs"])):
-        ctxs.append(Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
-        heads = []
-        for h in range(len(data["heads"][0])):
-            heads.append(Matrice(matrice = torch.DoubleTensor(data["heads"][k][h])))
-        ctxs_heads.append(heads)
-    correction_eos_context(ctxs)
-    correction_eos_crt(crt)
+    # print(data.keys())
+    from Classes.Snt import Snt
+    from Utils import Utils_concat
 
-    # sentence level heads
-    sl_heads = []
-    for h in range(len(data["SL_matrice"])):
-        sl_heads.append(Sl_matrice(matrice = torch.DoubleTensor(data["SL_matrice"][h]).squeeze()))
+    # Coté source
+    src_full_snt = Snt(identifiant= data['id'], tokens = data['src_tokens'].split())
+    Utils_concat.ajoute_eos_tokens_src(snt= src_full_snt, src_segments_labels= data['src_segments_labels'])
+    enc_matrices = torch.Tensor(data['heads_enc_attn'])
 
+    # Coté target
+    tgt_full_snt = Snt(identifiant= data['id'], tokens = data['tgt_tokens'].split())
+    Utils_concat.ajoute_eos_tokens_tgt(snt= tgt_full_snt, tgt_segments_labels= data['tgt_eos_pos'])
+    dec_matrices = torch.Tensor(data['heads_dec_attn']).squeeze()
 
-    return (crt, ctxs, ctxs_heads, sl_heads)
+    return {
+        'id': data['id'],
+        'src_tokens': src_full_snt,
+        'tgt_tokens': tgt_full_snt,
+        'heads_enc_attn': enc_matrices,
+        'heads_dec_attn': dec_matrices
+    }
 
 
-def correction_eos_context(ctxs: List[Snt])-> None:
+def correction_eos_context(ctxs: List["Snt"])-> None:
     for ctx in ctxs:
         ctx.tokens.append("<eos>")
 
-def correction_eos_crt(crt: Snt) -> None:
+def correction_eos_crt(crt: "Snt") -> None:
     crt.tokens.append("<eos>")
