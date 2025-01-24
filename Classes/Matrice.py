@@ -196,23 +196,59 @@ class Matrice(torch.Tensor):
 
         # Ecritures des phrases respectivement courante et de contexte
         # worksheet.write(0,0, f"{crt.identifiant}-k{str(int(crt.identifiant) - int(ctx.identifiant))}")
-        worksheet.write(0,0, f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}".decode('utf-8'))
+        worksheet.write(0,0, f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}")
         for row_idx, tok in enumerate(crt.tokens, start=1):
-            worksheet.write(row_idx, 0, tok.decode('utf-8'))
+            worksheet.write(row_idx, 0, tok)
         for col_idx, tok in enumerate(ctx.tokens, start=1):
-            worksheet.write(0, col_idx, tok.decode('utf-8'))
+            worksheet.write(0, col_idx, tok)
 
         for row_idx in range(self.shape[0]):
             max_value = torch.max(self[row_idx])
             for col_idx in range(self.shape[1]):
                 value = self[row_idx, col_idx].item()
                 if value == 0.0:
-                    worksheet.write(row_idx + 1, col_idx + 1, ".".decode('utf-8'))
+                    worksheet.write(row_idx + 1, col_idx + 1, ".")
                 elif value == max_value:
-                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision].decode('utf-8'), highlight_format)
+                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision], highlight_format)
                 else:
-                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision].decode('utf-8'))
+                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
         workbook.close()
+
+    def ecriture_tsv(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
+        """Écrit la matrice au format tsv 
+
+        Args:
+            matrice (torch.DoubleTensor): matrice des poids d'attentions
+            crt (Snt): phrase courante
+            ctx (Snt): phrase de contexte
+            absolute_folder (str): chemin absolu vers le dossier de sauvegarde
+            filename (str): nom du fichier de sauvegarde
+            precision (int, optional): nombre de chiffres significatifs à garder. Defaults to .
+            create_folder_path (bool, optional): indique s'il faut créer l'arborescence ou non. Defaults to False.
+        """
+        """
+        TODO: Corriger la façon de faire avec l'écriture de la précision. Trouver une alternative à torch.round() 
+        pour ne garder que les deniers chiffres significatifs voulus.
+        """
+        assert len(crt) == self.size(dim = 0), f"[DEBUG]Phrase {crt.identifiant}. Les lignes de la matrice doivent correspondre au nombre de mots dans la phrase courante {crt.identifiant}. l_matrice vs. nb_tokens: {self.size(dim = 0)} vs. {len(crt)}"
+        assert len(ctx) == self.size(dim = 1), f"[DEBUG]Phrase {crt.identifiant}. Les colonnes de la matrice doivent correspondre au nombre de mots dans la phrase de contexte {ctx.identifiant}. l_matrice vs. nb_tokens: {self.size(dim = 1)} vs. {len(ctx)}"
+        from Utils import Utils_data
+        Utils_data.check_path(absolute_folder=absolute_folder, create_folder_path=create_folder_path)
+        
+        # on écrit la combinaison d'identifiant
+        to_write = f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}\t" 
+        # on ajoute la phrase de contexte
+        to_write += "\t".join(ctx.tokens) + "\n" 
+        
+        # Pour chaque ligne
+        for row_idx in range(self.shape[0]):
+            # on écrit le token de la phrase + courante + la ligne correspondante de la matrice d'attention
+            to_write += f"{crt.tokens[row_idx]}\t{"\t".join(list(self[row_idx]))}\n" 
+        
+        # On écrit le tout dans un fichier tsv
+        with open(f"{absolute_folder}/{filename}.tsv", "w") as f:
+            f.write(to_write)
+
 
     def test_(self, value = 0):
         return Matrice([[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],

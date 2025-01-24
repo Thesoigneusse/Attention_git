@@ -24,6 +24,7 @@ _FULL_MATRICE = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
 _DATAPATH="./marco_script/data"
+_PUDB=False
 
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
 parser.add_argument('corpus_source', help='source language corpus data')
@@ -33,7 +34,8 @@ parser.add_argument('--evaluate-language', type=str, default='source', help='Spe
 parser.add_argument('--canmt-system', type=str, default='concat', help='Specify which type of CA-NMT is evaluated: concat (default), multienc')
 parser.add_argument('--output-file', type=str, default="./attention_analysis.results", help='Specify the path of the output file')
 args = parser.parse_args()
-import pudb; pudb.set_trace()
+if _PUDB:
+    import pudb; pudb.set_trace()
 
 wer_threshold = 0.5
 coreference_link_score = 'max'  # 'max' or 'avg', but the script only apply use_avg_score = coreference_link_score == 'avg'
