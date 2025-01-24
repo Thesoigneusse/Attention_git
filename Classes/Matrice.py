@@ -246,6 +246,7 @@ class Matrice(torch.Tensor):
             print(f"{crt.tokens[row_idx]}")
             print(self)
             print(self[row_idx])
+            print(list(self[row_idx]))
             print(f"'\t'.join(list(self[row_idx])")
             # on écrit le token de la phrase + courante + la ligne correspondante de la matrice d'attention
             to_write += f"{crt.tokens[row_idx]}\t" + '\t'.join(list(self[row_idx])) + "\n"
