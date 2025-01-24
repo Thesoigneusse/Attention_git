@@ -1,8 +1,8 @@
-
 import os
 import sys
 import re
 
+import torch
 import argparse
 import xml.etree.cElementTree as ET
 
@@ -694,11 +694,40 @@ def find_coref_matches(src_s, sys_s, a):
     return sys_coref_idxs
 
 def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
+    """_summary_
 
+    Args:
+        sys_s (str): string of source current sentence from the system
+        s_corefs (tuple): triples (as tuples), where elements are respectively:
+                            - 1. the index of the aligned token in the system input/output sequence     
+                            - 2. the set_id of the mention (the cluster)     
+                            - 3. True if the aligned token is identical to the token in the gold sentence.
+        sys_c (str): string of source context sentence from the system
+        c_corefs (tuple): triples (as tuples), where elements are respectively:
+                            - 1. the index of the aligned token in the system input/output sequence     
+                            - 2. the set_id of the mention (the cluster)     
+                            - 3. True if the aligned token is identical to the token in the gold sentence.
+        att (List[List[float]]): List of List of attention weight between crt and ctx. Taille: len(crt) x len(ctx)
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        tupple: tuple dont:
+            0: system current sentence
+            1: system context sentence
+            2: metrics : List of éléments:
+                0: (booléen) default to True
+                1: link_score >= all_lines_max_weight
+                2: sum(all_weights) > 0.0
+                3: link_score
+    """
+    
     s_tt = sys_s.split()
     c_tt = sys_c.split()
     annot_info = []
-    metrics = [False, False, 0.0]   # 1. Is max weight in the antecedent (any token) ?; 2. Is antecedent att weight > 0.0 (any token) ?; 3. Att weight to the antecedent
+    metrics = [False, False, 0.0]   
+    # 1. Is max weight in the antecedent (any token) ?; 2. Is antecedent att weight > 0.0 (any token) ?; 3. Att weight to the antecedent
 
     def compute_link_score( weights, avg=False):
         if avg:
@@ -712,6 +741,9 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
         - the index of the token in the system input/output sentence belonging to a mention
         - the set ID of the mention
         - True if the token is identical to the corresponding token in the reference corpus sentence as from alignment with edit-distance, False otherwise.
+        
+        Return:
+        
         """
 
         if len(corefs) == 0:
@@ -829,7 +861,8 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
     metrics = []
     for cur_cid in cur_mentions.keys():
         if cur_cid in ctx_mentions:
-            for cur_mnt in cur_mentions[cur_cid]:   # NOTE: from any mention with given set ID in current sentence, to any mention with given set ID in the context sentence.
+            for cur_mnt in cur_mentions[cur_cid]:   
+                # NOTE: from any mention with given set ID in current sentence, to any mention with given set ID in the context sentence.
                 
                 for ctx_mnt in ctx_mentions[cur_cid]:
                     # NOTE: a new metrics entry is added for each link from any mention in the current sentence to any mention in the context sentence
@@ -935,19 +968,35 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
         return res.strip()
     
     # TODO: Copier le bloc suivant pour traiter full_ctx en dehors du traitement du contexte.
-    def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data):
+    # def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data):
+    def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, att):
+        """_summary_
+
+        Args:
+            ctx_s (_type_): _description_
+            ctx_seq (_type_): _description_
+            cur_seq (_type_): _description_
+            sys_cur_corefs (_type_): _description_
+            key (_type_): _description_
+            system_data (_type_): _description_
+
+        Returns:
+            tuple: paire dont 
+                0: le premier élément est la clé de la matrice d'attention
+                1: 
+        """
         er_vals = edit_distance.str_edit_distance(ctx_s[1], ctx_seq)
         for i in range(0, 4):
             c2s_wer[i] += er_vals[i]
         er_ctx_seq = clean_for_passER(ctx_seq)
         er_pass = edit_distance.str_edit_distance(ctx_s[1], er_ctx_seq)
-        wer = float(sum(er_pass[0:3]))/float(er_pass[3])
+        wer = float(sum(er_pass[0:3]))/float(er_pass[3]) # (nb_ins + nb_del + nb_sub) / len(snt)
         if wer >= wer_threshold:
             sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.2f}; Ins: {}, Del: {}, Sub: {}) between reference and system context sentence @{}\n'.format(wer, er_vals[0], er_vals[1], er_vals[2], key))
             sys.stderr.write(' *   Ref: {}\n'.format(ctx_s[1]))
             sys.stderr.write(' *   Sys: {}\n'.format(ctx_seq))
             sys.exit(0)
-        a = er_vals[4]
+        a = er_vals[4] # Alignement entre les phrases
 
         if _CORPUS_SYSTEM_COMPARISON_LOG:
             print(' * [DEBUG] ANALYSIS@{} ctx-gold: {}'.format(key, ctx_s[1]))
@@ -960,11 +1009,11 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
         sys_ctx_corefs = find_coref_matches(ctx_s, ctx_seq, a)
         for scc in sys_ctx_corefs:
             token_identity_level.append( int(scc[2]) )
-        coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, system_data[key]['att'])
+        # coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, system_data[key]['att'])
+        coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, att)
         return (key, coref_res)
 
-
-    
+        
     c2s_wer = [0] * 4
 
     offset = 0
@@ -1047,32 +1096,55 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                     sys_cur_corefs = find_coref_matches(src_s, cur_seq, a)
                     for scc in sys_cur_corefs:
                         token_identity_level.append( int(scc[2]) )
-                    full_ctx_s = ['', '', [], [], ''] if _FULL_MATRICE else None
-                    full_ctx_seq = "" if _FULL_MATRICE else None
-                    for ctx_idx in range(1, ctx_size+1):
-                        key = str(offset_idx) + '-' + str(ctx_idx)
-                        #assert key in system_data, 'seq-id {} not defined in system output data'.format(key)
+                    if not _FULL_MATRICE:
+                        for ctx_idx in range(1, ctx_size+1):
+                            key = str(offset_idx) + '-' + str(ctx_idx)
+                            #assert key in system_data, 'seq-id {} not defined in system output data'.format(key)
 
-                        ctx_seq_flag = system_data[key]['ctx'] != '<eos>' if key in system_data else False
+                            ctx_seq_flag = system_data[key]['ctx'] != '<eos>' if key in system_data else False
 
-                        if _DEBUG_LOG:
-                            print('[DEBUG-KEY] ctx key defined: {}; ctx-seq-flag: {}; key: {} (offset_idx, ctx_idx: {}, {})'.format(key in system_data, ctx_seq_flag, key, offset_idx, ctx_idx))
-                            sys.stdout.flush()
+                            if _DEBUG_LOG:
+                                print('[DEBUG-KEY] ctx key defined: {}; ctx-seq-flag: {}; key: {} (offset_idx, ctx_idx: {}, {})'.format(key in system_data, ctx_seq_flag, key, offset_idx, ctx_idx))
+                                sys.stdout.flush()
 
-                        if key in system_data and ctx_seq_flag:
-                            ctx_s = align_data[idx-ctx_idx]
-                            ctx_seq = system_data[key]['ctx']
-                            ctx_seq = safe_clean(ctx_seq)
-                            if ctx_seq != '<end>':  # NOTE: in multi-enc system output, when the current sentence is at the begin of a document, context sentences are just '<end>' tokens
-                                if _FULL_MATRICE:
-                                    full_ctx_seq = " ".join([full_ctx_seq, ctx_seq]) # On concatene les phrases en ajoutant un caractère espace entre
+                            if key in system_data and ctx_seq_flag:
+                                ctx_s = align_data[idx-ctx_idx]
+                                ctx_seq = system_data[key]['ctx']
+                                ctx_seq = safe_clean(ctx_seq)
+                                if ctx_seq != '<end>':  # NOTE: in multi-enc system output, when the current sentence is at the begin of a document, context sentences are just '<end>' tokens
+                                    # if _FULL_MATRICE:
+                                    #     full_ctx_seq = " ".join([full_ctx_seq, ctx_seq]) # On concatene les phrases en ajoutant un caractère espace entre
+                                    #     full_att = torch.cat([full_att, system_data[key]['att']], dim = 1)
+                                    #     for i in range(len(ctx_s)):
+                                    #         full_ctx_s[i] += ctx_s[i]
+                                    # else:
+                                        analysis_results.append(something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data[key]['att']) )
+                    if _FULL_MATRICE : # Si on étudie l'attention crt x [k3,k2,k1] alors on doit fusionner les éléments
+                        ctx_seq = system_data[key]['ctx']
+                        ctx_seq = safe_clean(ctx_seq)
+                        if ctx_seq != '<end>':
+                            ctx_s = ['', '', [], [], ''] 
+                            full_ctx_s = ['', '', [], [], ''] 
+                            full_ctx_seq = "" 
+                            full_att = torch.zeros((len(system_data[key]['att']), 0)) 
+                            # for ctx_idx in range(ctx_size, 0, -1): # Pour chaque contexte possible (parcours inversé pour garder l'ordre de lecture)
+                            for ctx_idx in range(1, ctx_size + 1):
+                                key = str(offset_idx) + '-' + str(ctx_idx)
+                                if key in system_data and \
+                                    (system_data[key]['ctx'] != '<eos>'): # or system_data[key]['ctx'] != '<end>') : 
+                                    # Si le fichier existe pour crt x k alors
+                                    # On vérifie que le ctx n'est pas vide (<=> vérifier si != '<eos>)
+                                    # On concatene les phrases en ajoutant un caractère espace entre
+                                    full_ctx_seq = " ".join([safe_clean(system_data[key]['ctx']), full_ctx_seq]) if len(full_ctx_seq) > 0 else system_data[key]['ctx']
+                                    # On concatene les matrices d'attentions sur les colonnes 
+                                    full_att = torch.cat([torch.Tensor(system_data[key]['att']), full_att], dim = 1)
+                                    # On concatène tout les éléments de la structure ctx_s
+                                    
+                                    ctx_s = align_data[idx-ctx_idx] if (idx-ctx_idx >= 0 and system_data[key]['ctx'] != '<end>') else ['', '', [], [], '']
                                     for i in range(len(ctx_s)):
-                                        full_ctx_s[i] += ctx_s[i]
-                                else:
-                                    analysis_results.append(something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data) )
-                    if _FULL_MATRICE and len(full_ctx_seq) > 0 :
-                        analysis_results.append( something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, system_data))
-
+                                        full_ctx_s[i] = ctx_s[i] + full_ctx_s[i]
+                            if full_ctx_seq.split() != [] and len(ctx_s) > 0:
+                                analysis_results.append(something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, full_att))
     if _DEBUG_LOG and c2s_wer[3] > 0:
         print('[DEBUG-KEY] corpus vs. system sentences WER: {:.2f}'.format( float(sum(c2s_wer[:3]))/float(c2s_wer[3]) ))
         sys.stdout.flush()
@@ -1173,6 +1245,7 @@ def main(args):
         print(' **********')
     else:
         print(' *** NO MATCH !!!')
+        print(f'{metrics}')
 
 main(args)
 

@@ -3,10 +3,25 @@ import os
 import sys
 import torch
 
-__ed_dict__ = {}
+__ed_dict__ = {} # Dictionnaire de token produit par Marco
 
 def str_edit_distance(str_ref, str_hyp, model=None, tokenizer=None):
+    """Calcule la edit distanceentre du str str_ref (gold) avec le str str_hyp (prediction)
 
+    Args:
+        str_ref (str): str de la phrase de référence (gold)
+        str_hyp (str): str de la phrase hypothèse (prediction)
+        model (_type_, optional): _description_. Defaults to None. Not Used
+        tokenizer (_type_, optional): _description_. Defaults to None. Not Used
+
+    Returns:
+        tuple contenant en index:
+            0: nombre d'erreur insertion
+            1: nombre d'erreur suppression
+            2: nombre d'erreur substitution
+            3: taille du tenseur attribué à la référence
+            4: alignement entre référence et prédiction à partir du dictionnaire de tokens de Marco
+    """
     global __ed_dict__
     if len(__ed_dict__) > 100000:   # NOTE: avoid the dictionary size to increase too much
         __ed_dict__ = {}
@@ -103,7 +118,7 @@ def str_edit_distance(str_ref, str_hyp, model=None, tokenizer=None):
 
     alignement.reverse()
     return (n_ins, n_del, n_sub, curr_x_size, alignement)
-
+    
 
 def main(args):
 
