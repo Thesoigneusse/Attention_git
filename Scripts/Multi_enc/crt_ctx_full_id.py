@@ -17,7 +17,7 @@ for id in range(2308):
     OUTPUT_PATH = f"/home/getalp/lopezfab/Documents/multi_enc/{id}"
 
     # Lecture des données
-    data=ud.lecture_data(r_path)
+    data=ud.lecture_data(r_path) 
     crt, ctxs, ctxs_heads, sl_heads = ud.lecture_multi_enc_objet(data)
  
     src = Utils_multi_enc.pre_traitement_src(crt, ctxs, sl_heads, ctxs_heads)
