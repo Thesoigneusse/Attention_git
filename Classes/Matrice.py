@@ -236,14 +236,14 @@ class Matrice(torch.Tensor):
         Utils_data.check_path(absolute_folder=absolute_folder, create_folder_path=create_folder_path)
         
         # on écrit la combinaison d'identifiant
-        to_write = f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}\t" 
+        to_write = f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}" + "\t" 
         # on ajoute la phrase de contexte
         to_write += "\t".join(ctx.tokens) + "\n" 
         
         # Pour chaque ligne
         for row_idx in range(self.shape[0]):
             # on écrit le token de la phrase + courante + la ligne correspondante de la matrice d'attention
-            to_write += f"{crt.tokens[row_idx]}\t{'\t'.join(list(self[row_idx]))}\n"
+            to_write += "{}\t{}\n".format(crt.tokens[row_idx], '\t'.join(list(self[row_idx])))
         
         # On écrit le tout dans un fichier tsv
         with open(f"{absolute_folder}/{filename}.tsv", "w") as f:
