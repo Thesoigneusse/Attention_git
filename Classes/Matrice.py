@@ -168,7 +168,7 @@ class Matrice(torch.Tensor):
         return self
 
     def ecriture_xlsx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
-        """Écrit la matrice au format xslx
+        """Écrit la matrice au format xslx 
 
         Args:
             matrice (torch.DoubleTensor): matrice des poids d'attentions
