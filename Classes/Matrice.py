@@ -167,7 +167,7 @@ class Matrice(torch.Tensor):
             self = self[:, cols_a_conserver]
         return self
 
-    def ecriture_xslx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
+    def ecriture_xlsx(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
         """Écrit la matrice au format xslx
 
         Args:
@@ -205,11 +205,11 @@ class Matrice(torch.Tensor):
         for row_idx in range(self.shape[0]):
             max_value = torch.max(self[row_idx])
             for col_idx in range(self.shape[1]):
-                value = self[row_idx, col_idx].item()
-                if value == max_value:
-                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision], highlight_format)
-                elif value == 0.0:
+                value = self[row_idx, col_idx].item().decode('utf-8')
+                if value == 0.0:
                     worksheet.write(row_idx + 1, col_idx + 1, ".")
+                elif value == max_value:
+                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision], highlight_format)
                 else:
                     worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
         workbook.close()

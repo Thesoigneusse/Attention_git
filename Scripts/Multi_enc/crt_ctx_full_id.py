@@ -38,4 +38,4 @@ for id in range(2308):
         # print(f"ctx len vs. test ctx len: {len(src.get_full_ctxs())} vs. {test[0][0].size(dim = 1)}")
         for sl_heads in range(len(test)):
             for tl_heads in range(len(test[sl_heads])):
-                test[sl_heads][tl_heads].ecriture_xslx(crt = src.crt, ctx = src.get_full_ctxs(), absolute_folder= f"{OUTPUT_PATH}/{sl_heads}", filename = f"{tl_heads}", create_folder_path=True)
+                test[sl_heads][tl_heads].ecriture_xlsx(crt = src.crt, ctx = src.get_full_ctxs(), absolute_folder= f"{OUTPUT_PATH}/{sl_heads}", filename = f"{tl_heads}", create_folder_path=True)
