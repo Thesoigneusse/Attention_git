@@ -196,22 +196,22 @@ class Matrice(torch.Tensor):
 
         # Ecritures des phrases respectivement courante et de contexte
         # worksheet.write(0,0, f"{crt.identifiant}-k{str(int(crt.identifiant) - int(ctx.identifiant))}")
-        worksheet.write(0,0, f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}")
+        worksheet.write(0,0, f"{crt.identifiant}-{str(int(crt.identifiant) - int(ctx.identifiant))}".decode('utf-8'))
         for row_idx, tok in enumerate(crt.tokens, start=1):
-            worksheet.write(row_idx, 0, tok)
+            worksheet.write(row_idx, 0, tok.decode('utf-8'))
         for col_idx, tok in enumerate(ctx.tokens, start=1):
-            worksheet.write(0, col_idx, tok)
+            worksheet.write(0, col_idx, tok.decode('utf-8'))
 
         for row_idx in range(self.shape[0]):
             max_value = torch.max(self[row_idx])
             for col_idx in range(self.shape[1]):
-                value = self[row_idx, col_idx].item().decode('utf-8')
+                value = self[row_idx, col_idx].item()
                 if value == 0.0:
-                    worksheet.write(row_idx + 1, col_idx + 1, ".")
+                    worksheet.write(row_idx + 1, col_idx + 1, ".".decode('utf-8'))
                 elif value == max_value:
-                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision], highlight_format)
+                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision].decode('utf-8'), highlight_format)
                 else:
-                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision])
+                    worksheet.write(row_idx + 1, col_idx + 1, str(value)[:2+precision].decode('utf-8'))
         workbook.close()
 
     def test_(self, value = 0):
