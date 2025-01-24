@@ -242,14 +242,15 @@ class Matrice(torch.Tensor):
         
         # Pour chaque ligne
         for row_idx in range(self.shape[0]):
-            print(f"'{row_idx}")
-            print(f"{crt.tokens[row_idx]}")
-            print(self)
-            print(self[row_idx])
-            print(list(self[row_idx]))
-            print(f"'\t'.join(list(self[row_idx])")
+            # print(f"'{row_idx}")
+            # print(f"{crt.tokens[row_idx]}")
+            # print(self)
+            # print(self[row_idx])
+            # print(list(self[row_idx]))
+            # print([float(value) for value in list(self[row_idx])])
+            # print(f"'\t'.join(list(self[row_idx])")
             # on écrit le token de la phrase + courante + la ligne correspondante de la matrice d'attention
-            to_write += f"{crt.tokens[row_idx]}\t" + '\t'.join(list(self[row_idx])) + "\n"
+            to_write += f"{crt.tokens[row_idx]}\t" + '\t'.join([float(value) for value in list(self[row_idx])]) + "\n"
         
         # On écrit le tout dans un fichier tsv
         with open(f"{absolute_folder}/{filename}.tsv", "w") as f:
