@@ -45,6 +45,14 @@ class Multi_enc_matrice(CA_matrice):
             assert all(all(isinstance(matrice, Matrice) for matrice in head) for head in value), f"ctxs must be a list of list of Matrice. Current Value: {[type(head[0]) for head in value]}"
         self._ctxs_heads = value
 
+    def tojson(self):
+        return {
+            "crt": self.crt.tojson(),
+            "ctxs": [ctx.tojson() for ctx in self.ctxs],
+            "ctxs_heads": [[head.tojson() for head in ctx_heads] for ctx_heads in self.ctxs_heads],
+            "sl_heads": [sl_head.tojson() for sl_head in self.sl_heads]
+        }
+
     def suppr_pad(self, padding_mark='<pad>'):
         """Suppression des tokens de padding dans les matrices de chaque contexte.
         """

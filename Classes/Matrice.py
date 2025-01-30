@@ -1,4 +1,5 @@
 import torch
+import json
 from typing import List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -11,6 +12,17 @@ class Matrice(torch.Tensor):
 
     def __init__(self, data = None):
         pass
+
+    def tojson(self, precision: int = 2) -> List[List[float]]:
+        """Convertit le tensor en une liste de listes de flottants avec la précision spécifiée.
+
+        Args:
+            precision (int, optional): nombre de chiffres significatifs à garder. Defaults to 2.
+
+        Returns:
+            List[List[float]]: Liste de listes de flottants représentant le tensor.
+        """
+        return [[round(float(value), precision) for value in row] for row in self.tolist()]
 
     def new_empty(self, size, *args, **kwargs):
         return Matrice(super().new_empty(size, *args, **kwargs))
@@ -171,7 +183,6 @@ class Matrice(torch.Tensor):
         """Écrit la matrice au format xslx 
 
         Args:
-            matrice (torch.DoubleTensor): matrice des poids d'attentions
             crt (Snt): phrase courante
             ctx (Snt): phrase de contexte
             absolute_folder (str): chemin absolu vers le dossier de sauvegarde
@@ -218,7 +229,6 @@ class Matrice(torch.Tensor):
         """Écrit la matrice au format tsv 
 
         Args:
-            matrice (torch.DoubleTensor): matrice des poids d'attentions
             crt (Snt): phrase courante
             ctx (Snt): phrase de contexte
             absolute_folder (str): chemin absolu vers le dossier de sauvegarde
@@ -256,6 +266,31 @@ class Matrice(torch.Tensor):
         with open(f"{absolute_folder}/{filename}.tsv", "w") as f:
             f.write(to_write)
 
+    def ecriture_json(self, crt: 'Snt', ctx: 'Snt', absolute_folder: str, filename: str, precision: int = 2, create_folder_path: bool = False) -> None:
+        """Écrit la matrice au format JSON
+
+        Args:
+            crt (Snt): phrase courante
+            ctx (Snt): phrase de contexte
+            absolute_folder (str): chemin absolu vers le dossier de sauvegarde
+            filename (str): nom du fichier de sauvegarde
+            precision (int, optional): nombre de chiffres significatifs à garder. Defaults to 2.
+            create_folder_path (bool, optional): indique s'il faut créer l'arborescence ou non. Defaults to False.
+        """
+        assert len(crt) == self.size(dim=0), f"[DEBUG]Phrase {crt.identifiant}. Les lignes de la matrice doivent correspondre au nombre de mots dans la phrase courante {crt.identifiant}. l_matrice vs. nb_tokens: {self.size(dim=0)} vs. {len(crt)}"
+        assert len(ctx) == self.size(dim=1), f"[DEBUG]Phrase {crt.identifiant}. Les colonnes de la matrice doivent correspondre au nombre de mots dans la phrase de contexte {ctx.identifiant}. l_matrice vs. nb_tokens: {self.size(dim=1)} vs. {len(ctx)}"
+        
+        from Utils import Utils_data
+        Utils_data.check_path(absolute_folder=absolute_folder, create_folder_path=create_folder_path)
+        
+        dico = {
+            'crt': crt.__json__(),
+            'ctx': ctx.__json__(),
+            'matrice': [[round(float(value), precision) for value in row] for row in self.tolist()]
+        }
+        
+        with open(f"{absolute_folder}/{filename}.json", "w") as f:
+            json.dump(dico, f, indent=4)
 
     def test_(self, value = 0):
         return Matrice([[ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],

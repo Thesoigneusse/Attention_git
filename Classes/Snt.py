@@ -31,7 +31,7 @@ class Snt:
         return len(self.tokens)
     
     def __json__(self):
-        return str(self.__dict__)
+        return self.__dict__
 
     def __add__(self, other):
         assert isinstance(other, Snt) or (isinstance(other, list) and all([isinstance(val, str) for val in other])), f"other must be an instance of Snt or a List[str]. Current type: {type(other)}"
@@ -195,6 +195,9 @@ class Snt:
         assert isinstance(index, int), f"index must be an int. Current type: {type(index)}"
         assert isinstance(value, str), f"value must be a str. Current type: {type(value)}"
         self.tokens.insert(index, value)
+
+    def tojson(self):
+        return self.__json__()
 
     def toJSON(self):
         import json
