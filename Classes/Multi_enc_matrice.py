@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git')
+import torch
 from Classes.Snt import Snt
 from Classes.Matrice import Matrice
 from Classes.CA_matrice import CA_matrice
@@ -96,6 +99,15 @@ class Multi_enc_matrice(CA_matrice):
         Returns:
             Snt: Snt représentant l'ensemble du contexte. L'identifiant correspond à l'identifiant du contexte 
                     le plus éloigné de la phrase courante
+        
+        Tests:
+        >>> crt = Snt(identifiant=3, tokens= ['current1', 'current2', 'current3'])
+        >>> ctxs = [Snt(identifiant=1, tokens= ['context1', 'context2', 'context3']), Snt(identifiant=2, tokens= ['context4', 'context5', 'context6'])]
+        >>> ctxs_heads = [[Matrice([[1,2,3], [4,5,6], [7,8,9]]), Matrice([[1,2,3], [4,5,6], [7,8,9]])], [Matrice([[1,2,3], [4,5,6], [7,8,9]]), Matrice([[1,2,3], [4,5,6], [7,8,9]])]]
+        >>> sl_heads = [Sl_matrice(torch.Tensor([[1,2,3], [1,2,3], [1,2,3]])), Sl_matrice(torch.Tensor([[1,2,3], [1,2,3], [1,2,3]]))]
+        >>> m = Multi_enc_matrice(crt=crt, ctxs=ctxs, ctxs_heads=ctxs_heads, sl_heads=sl_heads)
+        >>> print(m.get_full_ctxs())
+        {'_identifiant': 1, '_tokens': ['context1', 'context2', 'context3', 'context4', 'context5', 'context6']}
         """
         ctxs = Snt(identifiant=self.crt.identifiant, tokens= [])
         for k in range(len(self.ctxs)):
@@ -113,10 +125,16 @@ class Multi_enc_matrice(CA_matrice):
         mean_tl_head = self.mean_ctxs_heads() if medium == 'tl_mean' else None
         mean_sl_head = self.mean_sl_heads() if medium == 'sl_mean' else None
 
-        for h_sl in range(len(self.sl_heads)):
-            contextualised_matrices = []
+        for h_sl in range(len(self.sl_heads)): 
+            # Pour chaque tête du mécanisme sentence_level
+            # On récupère une liste des matrices contextualisées des têtes d'attention des mécanismes token-level 
+            # dimension contextualised_matrices : nombre de tête token-level x len(phrase courante) x len(phrases de contexte)
+            contextualised_matrices = [] 
             if medium == 'full':
-                for h_tl in range(len(self.ctxs_heads[0])):
+                for h_tl in range(len(self.ctxs_heads[0])): 
+                    # Pour chaque tête du mécanisme token_level
+                    # On insert la matrice contextualisée de la tête d'attention token-level courante 
+                    # dans la liste contextualised_matrices
                     contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ self.ctxs_heads[k][h_tl] for k in range(self.sl_heads[h_sl].size(dim = 1))]))
             elif mean_tl_head is not None:
                 contextualised_matrices.append(self.sl_heads[h_sl].contextualise_matrice([ mean_tl_head[k][h_tl] for k in range(self.sl_heads[h_sl].size(dim = 1))]))
@@ -134,7 +152,7 @@ class Multi_enc_matrice(CA_matrice):
         from Utils import Utils
         return Sl_matrice(Utils.mean_matrices([self.sl_heads[sl_head].matrice for sl_head in range(len(self.sl_heads))]))
 
-    def ecriture_xslx(self, absolute_folder, filename= None, precision: int = 2, create_folder_path= False):
+    def ecriture_xlsx(self, absolute_folder, filename= None, precision: int = 2, create_folder_path= False):
         """Ecriture des matrices dans un fichier Excel.
 
         Args:
@@ -144,8 +162,7 @@ class Multi_enc_matrice(CA_matrice):
         """
         for k in range(len(self.ctxs_heads)):
             for head in range(len(self.ctxs_heads[k])):
-                Matrice.ecriture_xslx(matrice=self.ctxs_heads[k][head].matrice,
-                                        crt= self.crt,
+                self.ctxs_heads[k][head].ecriture_xlsx(crt= self.crt,
                                         ctx= self.ctxs[k],
                                         absolute_folder= f"{absolute_folder}/{head}",
                                         filename=f"{filename}_k{k}_h{head}" if filename else f"ctx_{k}_head_{head}",
@@ -170,41 +187,47 @@ if __name__ == '__main__':
     torch.set_printoptions(precision=2)
     print(f"[DEBUG] Doctest clear")
     _DEBUG_START = True
-    _DEBUG_SUPPR_PAD = True
-    _DEBUG_NORM_TENSOR = True
+    _DEBUG_SUPPR_PAD = False
+    _DEBUG_NORM_TENSOR = False
     _DEBUG_FUSION_BPE= False
     _PRECISION = 3
     _OUTPUT_PATH=f"/home/getalp/lopezfab/Documents"
     id = 1850
     r_path=f"/home/getalp/lopezfab/lig/temp/temp/temp/han_attn2/{id}.json"
     data=Utils_data.lecture_data(r_path)
-    crt, ctxs, ctxs_heads, sl_heads = Utils_data.lecture_objet(data)
+    print(data['ctxs'])
+    crt, ctxs, ctxs_heads, sl_heads = Utils_data.lecture_multi_enc_objet(data)
     m1 = Multi_enc_matrice(crt=crt,
                             ctxs= ctxs,
                             ctxs_heads=ctxs_heads,
                             sl_heads=sl_heads)
+    # TODO: matrices de contextes + ctxs à inverser
+    print(f"len(m1.crt): {len(m1.crt)}")
+    print(f"m1.crt: {m1.crt}")
+    print(f"len(m1.ctxs): {[len(ctx) for ctx in m1.ctxs]}")
+    print(f"m1.ctxs: {m1.ctxs}")
     if _DEBUG_START:
-        m1.ecriture_xslx(absolute_folder=f"/home/getalp/lopezfab/Documents/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"/home/getalp/lopezfab/Documents/{id}",
                             filename="raw",
                             precision=6,
                             create_folder_path=True)
     m1.suppr_pad()
     if _DEBUG_SUPPR_PAD:
-        m1.ecriture_xslx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
                             filename="suppr_pad",
                             precision=_PRECISION,
                             create_folder_path=True)
     
     m1.clean_matrice()
     if _DEBUG_NORM_TENSOR:
-        m1.ecriture_xslx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
                             filename="clean_matrice",
                             precision=_PRECISION,
                             create_folder_path=True)
 
     m1.fusion_bpe()
     if _DEBUG_FUSION_BPE:
-        m1.ecriture_xslx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
                             filename="fusion_bpe",
                             precision= _PRECISION,
                             create_folder_path=True)

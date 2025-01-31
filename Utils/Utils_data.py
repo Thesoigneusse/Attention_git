@@ -101,10 +101,10 @@ def lecture_multi_enc_objet(data):
     ctxs = []
     ctxs_heads = []
     for k in range(len(data["ctxs"])):
-        ctxs.append(Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
+        ctxs.insert(0, Snt(identifiant= crt.identifiant - k - 1,tokens= data["ctxs"][k]))
         heads = []
         for h in range(len(data["heads"][0])):
-            heads.append(Matrice(data["heads"][k][h]))
+            heads.insert(0, Matrice(data["heads"][k][h]))
         ctxs_heads.append(heads)
     correction_eos_context(ctxs)
     correction_eos_crt(crt)

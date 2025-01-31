@@ -1,4 +1,7 @@
 import torch
+import sys
+sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git')
+
 from Classes.Snt import Snt
 from Classes.Matrice import Matrice
 from typing import List
@@ -24,6 +27,7 @@ class Sl_matrice(Matrice):
 
 
         # Écriture
+    
     def contextualise_matrice(self, other: List[Matrice]) -> Matrice:
         """multiplie une matrice sentence-level avec 3 matrice word-level
 
@@ -32,6 +36,14 @@ class Sl_matrice(Matrice):
 
         Returns:
             Matrice: matrice contextualisée des 3 matrices words-level avec la matrice sentence-level
+        Tests:
+        >>> matrice = Sl_matrice(torch.Tensor([[1,2,3], [1,2,3], [1,2,3]]))
+        >>> matrices = [Matrice([[1, 2], [3, 4], [5, 6]]), Matrice([[0.5, 1], [1.5, 2], [2.5, 3]]), Matrice([[2, 0.5], [1, 3], [6, 2]])]
+        >>> print(matrice.contextualise_matrice(matrices))
+        Matrice([[ 1.0000,  2.0000,  1.0000,  2.0000,  6.0000,  1.5000],
+                 [ 3.0000,  4.0000,  3.0000,  4.0000,  3.0000,  9.0000],
+                 [ 5.0000,  6.0000,  5.0000,  6.0000, 18.0000,  6.0000]])
+
         """
         assert isinstance(other, List), f"other must be an instance of Matrice. Current type: {type(other)}"
         assert self.size(0) == other[0].size(0), f"The number of rows of the Sl_matrice must be equal to the number of rows of the Matrice. Current shape: {self.size()}, {other[0].size()}"
@@ -64,8 +76,19 @@ class Sl_matrice(Matrice):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    matrice = Sl_matrice(torch.Tensor([[1,2,3]]))
-    matrices = [Matrice([[1, 2]]), Matrice([[0.5, 1]]), Matrice([[2, 0.5]])]
+    matrice = Sl_matrice(torch.Tensor([[1,2,3],
+                                       [1,2,3],
+                                       [1,2,3]]))
+    matrices = [Matrice([[1, 2],
+                         [3, 4],
+                         [5, 6]]),
+                Matrice([[0.5, 1],
+                         [1.5, 2],
+                         [2.5, 3]]),
+                Matrice([[2, 0.5],
+                         [1, 3],
+                         [6, 2]])
+               ]
     print(matrice)
     print(matrices)
     print(matrice.contextualise_matrice(matrices))
