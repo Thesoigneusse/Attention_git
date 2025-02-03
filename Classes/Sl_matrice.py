@@ -7,14 +7,16 @@ from Classes.Matrice import Matrice
 from typing import List
 
 class Sl_matrice(Matrice):
+    def __new__(cls, data = None, *args, **kwargs):
+        instance = super().__new__(cls, data, *args, **kwargs) if data is not None else super().__new__(cls, 0, *args, **kwargs)
+        return instance
+
     def __init__(self, matrice: torch.Tensor = None) -> None:
-        super().__init__(matrice)
+        pass
+        # super().__init__(matrice)
 
     def __json__(self) -> str:
         return str(self.__dict__)
-
-    def __repr__(self) -> str:
-        return self.__json__()
 
     def __mul__(self, other):
         assert isinstance(other, int), f"[DEBUG] operator __mul__ only supported on positive integers. Current type: {type(other)}"
@@ -48,19 +50,23 @@ class Sl_matrice(Matrice):
         assert isinstance(other, List), f"other must be an instance of Matrice. Current type: {type(other)}"
         assert self.size(0) == other[0].size(0), f"The number of rows of the Sl_matrice must be equal to the number of rows of the Matrice. Current shape: {self.size()}, {other[0].size()}"
         assert self.size(1) == len(other), f"The number of columns of the Sl_matrice must be equal to the number of columns of the Matrice. Current shape: {self.size()}, {other.size()}"
+        # print(f"{other[0].size()} vs. {other[1].size()}")
 
         full_matrice = []
         for t in range(self.size(0)):
             # pour t le nombre de tokens dans la phrase courante (ligne de sl_matrice & de chaque matrice)
             temp_ctxs = []
+            # print(f"[debug] self[t, k]: {self}")
             for k in range(self.size(1)):
                 # pour k le nombre de contexte(colonne de self)
                 temp_ctxs.append(torch.Tensor(other[k][t, ...] * self[t, k]))
             # print(f"{[ctx.size() for ctx in temp_ctxs]}")
-            full_matrice.append(torch.cat(temp_ctxs, dim=0))
-
+            full_matrice.append(torch.cat(temp_ctxs))
+        #print(full_matrice[0].size())
 
         full_matrice = torch.stack(full_matrice, dim=0)
+        # for l in range(full_matrice.size(dim = 0)):
+        #     print(f"[debug ligne l]{full_matrice[l, -10:]}")
 
 
 
@@ -90,6 +96,6 @@ if __name__ == "__main__":
                          [6, 2]])
                ]
     print(matrice)
-    print(matrices)
-    print(matrice.contextualise_matrice(matrices))
+    # print(matrices)
+    # print(matrice.contextualise_matrice(matrices))
 

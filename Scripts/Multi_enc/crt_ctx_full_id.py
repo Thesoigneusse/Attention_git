@@ -30,17 +30,12 @@ with torch.no_grad():
         if len(src.ctxs) >= 1:
 
             # Process de la phrase courante
-            # print(f"[debug]src.ctxs_heads[0][0].size(): {src.ctxs_heads[0][0].size()}")
             src.suppr_pad()
-            # print(f"[post suppr_pad]src.ctxs_heads[0][0].size()): {src.ctxs_heads[0][0].size()}")
             src.fusion_bpe()
-            # print(f"[post fusion_bpe]src.ctxs_heads[0][0].size()): {src.ctxs_heads[0][0].size()}")
             src.clean_matrice()
-            # print(f"[post clean_matrice]src.ctxs_heads[0][0].size()): {src.ctxs_heads[0][0].size()}")
             test = src.get_crt_to_ctxs('full')
             # test List[List[Matrice]]. Taille : nb_sl_heads x nb_tl_heads x [crt x ctxs]
-            # print(f"crt len vs. test crt len: {len(src.crt)} vs. {test[0][0].size(dim = 0)}")
-            # print(f"ctx len vs. test ctx len: {len(src.get_full_ctxs())} vs. {test[0][0].size(dim = 1)}")
             for sl_heads in range(len(test)):
                 for tl_heads in range(len(test[sl_heads])):
+                    test[sl_heads][tl_heads].norm_tenseur()
                     test[sl_heads][tl_heads].ecriture_tsv(crt = src.crt, ctx = src.get_full_ctxs(), absolute_folder= f"{OUTPUT_PATH}/{sl_heads}", filename = f"{tl_heads}", create_folder_path=True)

@@ -75,7 +75,7 @@ class Multi_enc_matrice(CA_matrice):
         """Fusion des tokens BPE dans les matrices de chaque contexte.
         """
         list_crt_fusion_bpe, list_ctx_fusion_bpe = self.sentences_fusion_bpe(BPE_mark=BPE_mark)
-        print(f"list_ctx_fusion_bpe: {list_ctx_fusion_bpe}")
+        # print(f"list_ctx_fusion_bpe: {list_ctx_fusion_bpe}")
         # On fusionne les poids correspondant aux BPEs dans les têtes token-level
         for k in range(len(self.ctxs)):
             for head in range(len(self.ctxs_heads[k])):
@@ -90,8 +90,8 @@ class Multi_enc_matrice(CA_matrice):
             for head in range(len(self.ctxs_heads[k])):
                 self.ctxs_heads[k][head].suppr_inf(medium="suppr_inf_uniform")
                 self.ctxs_heads[k][head].norm_tenseur(medium="max")
-        for sl_head in range(len(self.sl_heads)):
-            self.sl_heads[sl_head].norm_tenseur()
+        # for sl_head in range(len(self.sl_heads)):
+        #     self.sl_heads[sl_head].norm_tenseur()
 
     def get_full_ctxs(self) -> Snt:
         """Retourne le contexte sous forme d'une seule Snt.
@@ -165,7 +165,7 @@ class Multi_enc_matrice(CA_matrice):
                 self.ctxs_heads[k][head].ecriture_xlsx(crt= self.crt,
                                         ctx= self.ctxs[k],
                                         absolute_folder= f"{absolute_folder}/{head}",
-                                        filename=f"{filename}_k{k}_h{head}" if filename else f"ctx_{k}_head_{head}",
+                                        filename=f"{filename}_k{len(self.ctxs) - k}_h{head}" if filename else f"ctx_{k}_head_{head}",
                                         precision=precision,
                                         create_folder_path=create_folder_path)
 
@@ -183,52 +183,57 @@ if __name__ == '__main__':
     doctest.testmod()
     import torch
     from Utils import Utils_data
+    from Utils import Utils_multi_enc
 
     torch.set_printoptions(precision=2)
     print(f"[DEBUG] Doctest clear")
     _DEBUG_START = True
-    _DEBUG_SUPPR_PAD = False
-    _DEBUG_NORM_TENSOR = False
-    _DEBUG_FUSION_BPE= False
+    _DEBUG_SUPPR_PAD = True
+    _DEBUG_NORM_TENSOR = True
+    _DEBUG_FUSION_BPE= True
     _PRECISION = 3
     _OUTPUT_PATH=f"/home/getalp/lopezfab/Documents"
     id = 1850
+
     r_path=f"/home/getalp/lopezfab/lig/temp/temp/temp/han_attn2/{id}.json"
     data=Utils_data.lecture_data(r_path)
-    print(data['ctxs'])
     crt, ctxs, ctxs_heads, sl_heads = Utils_data.lecture_multi_enc_objet(data)
-    m1 = Multi_enc_matrice(crt=crt,
-                            ctxs= ctxs,
-                            ctxs_heads=ctxs_heads,
-                            sl_heads=sl_heads)
-    # TODO: matrices de contextes + ctxs à inverser
-    print(f"len(m1.crt): {len(m1.crt)}")
-    print(f"m1.crt: {m1.crt}")
-    print(f"len(m1.ctxs): {[len(ctx) for ctx in m1.ctxs]}")
-    print(f"m1.ctxs: {m1.ctxs}")
+    # print(f"[debug] m1/sl_heads: {sl_heads}")
+    m1 = Utils_multi_enc.pre_traitement_src(crt, ctxs, sl_heads, ctxs_heads)
     if _DEBUG_START:
-        m1.ecriture_xlsx(absolute_folder=f"/home/getalp/lopezfab/Documents/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"/home/getalp/lopezfab/Documents/{id}/test_contextualised",
                             filename="raw",
                             precision=6,
                             create_folder_path=True)
+    
     m1.suppr_pad()
     if _DEBUG_SUPPR_PAD:
-        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}/test_contextualised",
                             filename="suppr_pad",
                             precision=_PRECISION,
                             create_folder_path=True)
     
     m1.clean_matrice()
     if _DEBUG_NORM_TENSOR:
-        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}/test_contextualised",
                             filename="clean_matrice",
                             precision=_PRECISION,
                             create_folder_path=True)
-
+    # print(f"[debug] m1/sl_heads: {m1.sl_heads}")
     m1.fusion_bpe()
     if _DEBUG_FUSION_BPE:
-        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}",
+        m1.ecriture_xlsx(absolute_folder=f"{_OUTPUT_PATH}/{id}/test_contextualised",
                             filename="fusion_bpe",
                             precision= _PRECISION,
                             create_folder_path=True)
+    
+    
+    test = m1.get_crt_to_ctxs('full')
+    # test List[List[Matrice]]. Taille : nb_sl_heads x nb_tl_heads x [crt x ctxs]
+    print(f"crt len vs. test crt len: {len(m1.crt)} vs. {test[0][0].size(dim = 0)}")
+    print(f"ctx len vs. test ctx len: {len(m1.get_full_ctxs())} vs. {test[0][0].size(dim = 1)}")
+    for sl_heads in range(len(test)):
+        for tl_heads in range(len(test[sl_heads])):
+            test[sl_heads][tl_heads].norm_tenseur()
+            test[sl_heads][tl_heads].ecriture_xlsx(crt = m1.crt, ctx = m1.get_full_ctxs(), absolute_folder= f"{_OUTPUT_PATH}/{id}/test_contextualised/{sl_heads}", filename = f"{tl_heads}", create_folder_path=True)
 
