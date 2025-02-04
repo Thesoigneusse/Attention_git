@@ -1142,27 +1142,34 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                             ctx_s = ['', '', [], [], ''] 
                             full_ctx_s = ['', '', [], [], ''] 
                             full_ctx_seq = "" 
+                            system_data_key = ""
                             # full_att = torch.zeros((len(system_data[key]['att']), 0)) 
                             # for ctx_idx in range(ctx_size, 0, -1): # Pour chaque contexte possible (parcours inversé pour garder l'ordre de lecture)
+                            limit = False
                             for ctx_idx in range(1, ctx_size + 1):
                                 key = str(idx + offset) + '-' + str(ctx_idx)
+                                if not limit:
+                                    ctx_s = align_data[idx-ctx_idx] if (idx-ctx_idx >= 0) else ['', '', [], [], '']
+                                    for i in range(len(ctx_s)):
+                                        full_ctx_s[i] = ctx_s[i] + full_ctx_s[i]
+
                                 # key = str(idx) + '-' + str(ctx_idx)
                                 if key in system_data and \
                                     (system_data[key]['ctx'] != '<eos>'): # or system_data[key]['ctx'] != '<end>') : 
                                     # Si le fichier existe pour crt x k alors
+                                    full_ctx_seq = safe_clean(system_data[key]['ctx']) 
                                     # On vérifie que le ctx n'est pas vide (<=> vérifier si != '<eos>)
                                     # On concatene les phrases en ajoutant un caractère espace entre
-                                    full_ctx_seq = " ".join([safe_clean(system_data[key]['ctx']), full_ctx_seq]) if len(full_ctx_seq) > 0 else system_data[key]['ctx']
+                                    limit = True
+                                    system_data_key = key
                                     # On concatene les matrices d'attentions sur les colonnes 
                                     # full_att = torch.cat([torch.Tensor(system_data[key]['att']), full_att], dim = 1)
                                     # On concatène tout les éléments de la structure ctx_s
                                     
-                                    ctx_s = align_data[idx-ctx_idx] if (idx-ctx_idx >= 0 and system_data[key]['ctx'] != '<end>') else ['', '', [], [], '']
-                                    for i in range(len(ctx_s)):
-                                        full_ctx_s[i] = ctx_s[i] + full_ctx_s[i]
+                                    
                             if full_ctx_seq.split() != [] and len(ctx_s) > 0:
                                 idx_old = idx
-                                analysis_results.append(something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, system_data[f"{idx}-{k}"]['att']))
+                                analysis_results.append(something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, system_data[system_data_key]['att']))
     if _DEBUG_LOG and c2s_wer[3] > 0:
         print('[DEBUG-KEY] corpus vs. system sentences WER: {:.2f}'.format( float(sum(c2s_wer[:3]))/float(c2s_wer[3]) ))
         sys.stdout.flush()

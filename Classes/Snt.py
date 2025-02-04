@@ -137,7 +137,8 @@ class Snt:
         [[6, 5], [1, 0]]
         >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
         [[3, 2, 1, 0]]
-        >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
+
+        # >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
         """
         assert isinstance(tokens, list), f"tokens must be a list. Current type: {type(tokens)}"
         assert all(isinstance(tok, str) for tok in tokens), f"tokens must be a list of str. Current type: {[type(tok) for tok in tokens]}"
@@ -147,15 +148,37 @@ class Snt:
         from Utils import Utils
 
         liste_bpe = []
-        flag = False
-        for i in range(len(tokens)-1, -2, -1):
-            if tokens[i].endswith(BPE_mark):
+        flag = False # Flag permettant de savoir si on est en train de traiter un mot BPEisé
+        indice_token = 0
+        while indice_token < len(tokens):
+            # Pour chaque token de la phrase
+            if tokens[indice_token].endswith(BPE_mark) and flag == False:
+                # Si le token contient une marque de BPE et que le token précédent n'en contient pas
+                # on ajoute une liste contenant l'indice du token 
                 flag = True
-                liste_bpe.append(i+1)
-            elif flag:
-                liste_bpe.append(i+1)
+                liste_bpe.append([indice_token])
+            elif tokens[indice_token].endswith(BPE_mark) and flag:
+                # Si le token précédent contient une marque de BPE
+                # on ajoute l'indice du token courant (termine le mot BPEisé)
+                liste_bpe[-1].append(indice_token)
+            elif not tokens[indice_token].endswith(BPE_mark) and flag:
+                liste_bpe[-1].append(indice_token)
                 flag = False
-        return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else []
+            elif not tokens[indice_token].endswith(BPE_mark) and not flag:
+                # Si le token ne contient pas de marque de BPE
+                # On met le flag à False signifiant qu'on a fini de traiter un mot BPEisé
+                flag = False
+            indice_token += 1
+        return [groupe[::-1] for groupe in liste_bpe[::-1]] if len(liste_bpe) >= 1 else None
+
+        # for i in range(len(tokens)-1, -2, -1):
+        #     if tokens[i].endswith(BPE_mark):
+        #         flag = True
+        #         liste_bpe.append(i+1)
+        #     elif flag:
+        #         liste_bpe.append(i+1)
+        #         flag = False
+        # return Utils.regrouper_indices_consecutifs(liste_bpe) if len(liste_bpe) >= 1 else []
         # return [ i for i in range(len(tokens) -1, -1, -1) if tokens[i].endswith(BPE_mark) ]
 
     def append(self, value: str):
