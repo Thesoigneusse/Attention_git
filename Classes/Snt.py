@@ -137,6 +137,8 @@ class Snt:
         [[6, 5], [1, 0]]
         >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu@@", "lu@@", "le", ".", "<eos>"])
         [[3, 2, 1, 0]]
+        >>> Snt.list_fusion_bpe(tokens= ["lu@@", "bu", "lu@@", "le", ".", "<eos>"])
+        [[3, 2], [1, 0]]
 
         # >>> Snt.list_fusion_bpe(tokens= ["Ce@@", "ci", "est", "<pad>", "un", "te@@", "st", ".", "<eos>"], BPE_mark="bpe_mark")
         """
