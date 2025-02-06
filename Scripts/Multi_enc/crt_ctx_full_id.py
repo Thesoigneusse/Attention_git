@@ -15,7 +15,7 @@ with torch.no_grad():
     precision = 8
 
 
-    for id in range(971,972):
+    for id in range(0, 2308):
         print(f"sentence : {id}")
         precision = 8
         r_path=f"/home/getalp/lopezfab/temp/temp/temp/han_attn2/{id}.json"
