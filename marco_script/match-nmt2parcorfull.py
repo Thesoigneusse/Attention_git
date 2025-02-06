@@ -1031,11 +1031,11 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
     token_identity_level = []
     idx_old = 0
     k = -1
-    heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2042, 2075, 2108, 2133, 2153, 2191, 2214, 2245, 2262, 2280]
+    heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2044, 2075, 2108, 2123, 2153, 2191, 2214, 2245, 2262, 2280]
     for idx, src_s in enumerate(align_data):
         k = min(k+1, 3)
         #offset_idx = compute_head_offset(idx, src_heads)
-        if idx >= 0 and idx != 2127:
+        if idx >= 0: # and idx < 2127:
             if idx in heads:
                 offset += 1
                 k= -1
