@@ -1035,7 +1035,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
     for idx, src_s in enumerate(align_data):
         k = min(k+1, 3)
         #offset_idx = compute_head_offset(idx, src_heads)
-        if idx >= 0:
+        if idx >= 0 and idx != 2127:
             if idx in heads:
                 offset += 1
                 k= -1

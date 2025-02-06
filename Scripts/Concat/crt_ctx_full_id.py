@@ -41,7 +41,7 @@ for id in range(2308):
                 for h in range(len(crt_to_ctxs_crt[l])):
                     crt_to_ctxs_crt[l][h].suppr_inf() # On supprime les valeurs inférieures à l'uniforme
                     crt_to_ctxs_crt[l][h].norm_tenseur() # On normalise les valeurs entre [0;1]
-                    crt_to_ctxs_crt[l][h].ecriture_xslx(crt= test.crt, ctx = test.get_full_snt(to_process = _TO_PROCESS), absolute_folder=f"{_OUTPUT_PATH}/crt_to_full_ctxs_crt/{l}", filename= f'{h}', create_folder_path=True)
+                    crt_to_ctxs_crt[l][h].ecriture_tsv(crt= test.crt, ctx = test.get_full_snt(to_process = _TO_PROCESS), absolute_folder=f"{_OUTPUT_PATH}/crt_to_full_ctxs_crt/{l}", filename= f'{h}', create_folder_path=True)
 
             # test.ecriture_xslx(data_to_write="crt_to_full_ctxs_crt", absolute_folder=_OUTPUT_PATH, create_folder_path=True)
         else:
