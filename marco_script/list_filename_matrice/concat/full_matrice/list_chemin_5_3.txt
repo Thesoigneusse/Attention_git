@@ -1,4 +1,3 @@
-/home/getalp/lopezfab/Documents/concat/1/5/3.tsv
 /home/getalp/lopezfab/Documents/concat/2/5/3.tsv
 /home/getalp/lopezfab/Documents/concat/3/5/3.tsv
 /home/getalp/lopezfab/Documents/concat/4/5/3.tsv
