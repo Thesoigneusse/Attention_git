@@ -1299,6 +1299,10 @@ def main(args):
     if metrics[0] > 0:
         print(' ********** ')
         print(' Analysis results written in {}'.format(output_file))
+        try:
+            print(f" * Analysis done on {args.system_data}")
+        except:
+            print(f"wrong argument for args.system_data")
         print(' -----')
         print(' * Evaluation:')
         print(' * Corpus-to-system mention token identity level: {:.2f}%'.format( (sum(til)/len(til))*100.0 if len(til) > 0 else 0.0))

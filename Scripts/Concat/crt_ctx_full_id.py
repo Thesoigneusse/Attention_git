@@ -8,7 +8,7 @@
 # L : nombre de layers
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '/home/getalp/lopezfab/Attention_git')))
 from Utils import Utils_concat
 from Utils import Utils_data
 from Classes.Concat_matrice import Concat_matrice
