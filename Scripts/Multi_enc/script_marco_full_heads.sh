@@ -12,7 +12,7 @@ for sentence_level_head in {0..7}; do
         # Modify the parameter
         modified_command=${base_command//list_chemin_0_0.txt/list_chemin_${sentence_level_head}_${token_level_heads}_tsv.txt}
         # Execute the command and store the output in a file
-        output_file="$ATTENTION_GIT/Output/Marco_script_output/output_$sentence_level_head_$token_level_heads.txt"
+        output_file="$ATTENTION_GIT/Output/Marco_script_output/output_$sentence_level_head\_$token_level_heads.txt"
         $modified_command > $output_file
         echo "Output stored in $output_file"
     done
