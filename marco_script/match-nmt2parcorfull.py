@@ -24,7 +24,7 @@ _DEBUG_LOG = True
 _FULL_MATRICE = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
-_DATAPATH="./marco_script/data"
+_DATAPATH="/home/getalp/lopezfab/Attention_git/marco_script/data"
 _PUDB=False
 if _PUDB:
     import pudb; pudb.set_trace()
