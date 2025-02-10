@@ -1030,7 +1030,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
     analysis_results = []
     token_identity_level = []
     idx_old = 0
-    k = -1
+    k = 1 if canmt_system == 'concat' else -1
     heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2044, 2075, 2108, 2123, 2153, 2191, 2214, 2245, 2262, 2280]
     for idx, src_s in enumerate(align_data):
         k = min(k+1, 3)
@@ -1046,7 +1046,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                 if offset >= 336:
                     offset = 2
             # ------------------------------------
-            cur_bogus_idx = cur_bogus_idx if canmt_system == 'concat' else k
+            cur_bogus_idx = k
             skip = False
             if seq_ids is None:
                 key = str(offset+idx) + '-' + str(cur_bogus_idx)
