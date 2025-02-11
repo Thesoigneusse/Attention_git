@@ -26,6 +26,8 @@ _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
 _DATAPATH="/home/getalp/lopezfab/Attention_git/marco_script/data"
 _PUDB=False
+_LOCAL=False
+_PATH= "/home/getalp/lopezfab/Attention_git/" if _LOCAL else "/home/getalp/lopezfab/lig/Attention_git/"
 if _PUDB:
     import pudb; pudb.set_trace()
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
@@ -1209,10 +1211,11 @@ def main(args):
     #     json.dump(disco_tgt_data, f)
     # print('[debug] disco_tgt_data écrit')
     # Check if the JSON files exist
-    disco_src_data_path = '/home/getalp/lopezfab/Bureau/Attention_git/Tests/disco_src_data.json'
-    disco_tgt_data_path = '/home/getalp/lopezfab/Bureau/Attention_git/Tests/disco_tgt_data.json'
-    news_src_data_path = '/home/getalp/lopezfab/Bureau/Attention_git/Tests/news_src_data.json'
-    news_tgt_data_path = '/home/getalp/lopezfab/Bureau/Attention_git/Tests/news_tgt_data.json'
+    
+    disco_src_data_path = f'{_PATH}/Tests/disco_src_data.json'
+    disco_tgt_data_path = f'{_PATH}/Tests/disco_tgt_data.json'
+    news_src_data_path = f'{_PATH}/Tests/news_src_data.json'
+    news_tgt_data_path = f'{_PATH}Tests/news_tgt_data.json'
 
     if os.path.exists(disco_src_data_path) and os.path.exists(disco_tgt_data_path):
         with open(disco_src_data_path, 'r', encoding='utf-8') as f:
