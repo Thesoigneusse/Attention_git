@@ -1,10 +1,10 @@
-import sys
-sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
+from dataclasses import dataclass, asdict
 from typing import List
 import json
 
 
-from dataclasses import dataclass
+import sys
+sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 from Classes.WordAlignement import WordAlignement
 
 @dataclass
@@ -47,7 +47,7 @@ class EditDistance():
             assert all(isinstance(alignement, WordAlignement) for alignement in alignements), "[DEBUG] alignements must be a list of WordAlignement. Current list: {}".format([type(alignement) for alignement in alignements])
         self._alignements = alignements
 
-    def get_wer(self):
+    def get_wer(self) -> float:
         """Retourne le Word Error Rate (WER) de l'alignement.
 
         Returns:
@@ -77,18 +77,20 @@ class EditDistance():
                              self.nombre_erreur_suppression + other.nombre_erreur_suppression, 
                              self.nombre_erreur_substitution + other.nombre_erreur_substitution, 
                              self.taille_tenseur_reference + other.taille_tenseur_reference, 
-                             deepcopy(self.alignements) + deepcopy(other.alignements))
+                             self.alignements + other.alignements)
 
-    def toJson(self):
-        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
-
+    def toJson(self) -> dict:
+        return asdict(self)
 
 if __name__ == "__main__":
     import doctest; doctest.testmod()
     print(f"[DEBUG] test cleared\n")
+    
     alignements = [WordAlignement("ins", 1, 2), WordAlignement("del", 2, 3)]
     ed = EditDistance(1, 2, 3, 4, alignements)
     ed2 = EditDistance(5, 6, 7, 8, alignements)
+    with open("./test.json", "w") as f:
+        f.write(ed.toJson())
     print(ed.toJson())
 
 

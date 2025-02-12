@@ -1,10 +1,9 @@
+from dataclasses import dataclass, field, asdict
 from typing import List
-import sys
-sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 import json
 
-from dataclasses import dataclass, field
-
+import sys
+sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 from Classes.WordAlignement import WordAlignement
 
 @dataclass
@@ -23,9 +22,11 @@ class SentenceAlignement():
     unique_token_identifiers_sequence: List[str] = field(default_factory=list)
     tokenized_parcorfull_sentence: List[WordAlignement] = field(default_factory=list)
 
-    def toJson(self):
-        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
+    # def __post_init__(self):
+    #     self.unique_token_identifiers_sequence = []
 
+    def toJson(self) -> dict:
+        return asdict(self)
 
 if __name__ == "__main__":
     import doctest; doctest.testmod()
@@ -35,20 +36,19 @@ if __name__ == "__main__":
         identifiant=1,
         system_input_sentence='"Even in purely non-religious terms, homosexuality represents a misuse of the sexual faculty."',
         raw_parcorfull_sentence='" Even in purely non-religious terms , homosexuality represents a misuse of the sexual faculty ."',
-        unique_token_identifiers_sequence=[
-            '000_1756-word_1', '000_1756-word_2', '000_1756-word_3', '000_1756-word_4', '000_1756-word_5', 
-            '000_1756-word_6', '000_1756-word_7', '000_1756-word_8', '000_1756-word_9', '000_1756-word_10', 
-            '000_1756-word_11', '000_1756-word_12', '000_1756-word_13', '000_1756-word_14', '000_1756-word_15', 
-            '000_1756-word_16'
-        ],
-        tokenized_parcorfull_sentence=[
-            WordAlignement('del', 0, None), WordAlignement('sub', 1, 0), WordAlignement('match', 2, 1), 
-            WordAlignement('match', 3, 2), WordAlignement('match', 4, 3), WordAlignement('del', 5, None), 
-            WordAlignement('sub', 6, 4), WordAlignement('match', 7, 5), WordAlignement('match', 8, 6), 
-            WordAlignement('match', 9, 7), WordAlignement('match', 10, 8), WordAlignement('match', 11, 9), 
-            WordAlignement('match', 12, 10), WordAlignement('match', 13, 11), WordAlignement('del', 14, None), 
-            WordAlignement('sub', 15, 12)
-        ],
+        unique_token_identifiers_sequence=['000_1756-word_1'],
+        tokenized_parcorfull_sentence=[WordAlignement('del', 0, None)],
+        annotated_system_input_sentence='#["Even"]#-set_219 #["in"]#-set_219 #["purely"]#-set_219 #["non-religious"]#-set_219 #["terms"]#-set_219 #[,]#-set_219 #["homosexuality"]#-set_219 #["represents"]#-set_219 #["a"]#-set_219 #["misuse"]#-set_219 #["of"]#-set_219 #["the"]#-set_219 #["sexual"]#-set_219 #["faculty"]#-set_219 #["."]#-set_219'
+    )
+    sentence2 = SentenceAlignement(
+        identifiant=2,
+        system_input_sentence='"Even in purely non-religious terms, homosexuality represents a misuse of the sexual faculty."',
+        raw_parcorfull_sentence='" Even in purely non-religious terms , homosexuality represents a misuse of the sexual faculty ."',
+        unique_token_identifiers_sequence=['000_1756-word_3'],
+        tokenized_parcorfull_sentence=[WordAlignement('ins', 0, None)],
+            
         annotated_system_input_sentence='#["Even"]#-set_219 #["in"]#-set_219 #["purely"]#-set_219 #["non-religious"]#-set_219 #["terms"]#-set_219 #[,]#-set_219 #["homosexuality"]#-set_219 #["represents"]#-set_219 #["a"]#-set_219 #["misuse"]#-set_219 #["of"]#-set_219 #["the"]#-set_219 #["sexual"]#-set_219 #["faculty"]#-set_219 #["."]#-set_219'
     )
     print(sentence.toJson())
+    print('**************************')
+    print(sentence2.toJson())

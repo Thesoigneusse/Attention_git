@@ -15,3 +15,4 @@ marco_script/Classes/__init__.py
 marco_script/Classes/coreference.py
 marco_script/Classes/CorpusSentence.py
 marco_script/test.ipynb
+test.json
