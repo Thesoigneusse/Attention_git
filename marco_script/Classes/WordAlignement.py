@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Literal
+import json
 import sys
 sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 
@@ -11,35 +12,28 @@ class WordAlignement():
     - l'index du mot dans la phrase de reference
     - l'index du mot dans la phrase hypothese.
     """
-    alignement_type: Literal['del', 'ins', 'sub', 'match']
     index_reference: int
     index_hypothese: int
+    alignement_type: Literal['del', 'ins', 'sub', 'match']
     
     def __init__(self, alignement_type: str, index_reference: int, index_hypothese: int):
         self.alignement_type = alignement_type
         self.index_reference = index_reference
         self.index_hypothese = index_hypothese
 
-    def __post_init__(self):
-        """On restreint les valeurs possibles de alignement_type à 'del', 'ins', 'sub', 'match'
+    @property
+    def alignement_type(self):
+        return self._alignement_type
+    @alignement_type.setter
+    def alignement_type(self, value):
+        assert value in ['ins', 'del', 'sub', 'match'], f"[DEBUG] value must be in ['ins', 'del', 'sub', 'match']. Current alignement_type: {value}"
+        self._alignement_type = value
 
-        Raises:
-            ValueError: _description_
-        """
-        alignement_type_valeurs_valides = {'del', 'ins', 'sub', 'match'}
-        if self.alignement_type not in alignement_type_valeurs_valides:
-            raise ValueError(f"alignement_type invalide : {self.alignement_type}. Possible values: {alignement_type_valeurs_valides}")
-
-    # def __str__(self):
-    #     return f"Alignement(alignement_type={self.alignement_type}, index_reference={self.index_reference}, index_hypothese={self.index_hypothese})"
-    
-    # def __repr__(self):
-    #     return str(self)
-
-
+    def toJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
 
 
 if __name__ == "__main__":
     alignement = WordAlignement("ins", 1, 2)
-    print(alignement)
+    print(alignement.toJson())
 

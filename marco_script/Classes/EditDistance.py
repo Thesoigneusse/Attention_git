@@ -1,9 +1,13 @@
 import sys
 sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 from typing import List
+import json
+
+
+from dataclasses import dataclass
 from Classes.WordAlignement import WordAlignement
 
-
+@dataclass
 class EditDistance():
     """Objet permettant de calculer la edit distance entre deux phrases.
         Contient les informations suivantes:
@@ -13,6 +17,13 @@ class EditDistance():
             - taille_tenseur_reference (int): Taille du tenseur de référence
             - alignements (List[WordAlignement]): Liste des alignements entre les deux
     """
+    nombre_erreur_insertion: int
+    nombre_erreur_suppression: int
+    nombre_erreur_substitution: int
+    taille_tenseur_reference: int
+    alignements: List[WordAlignement]
+
+
     def __init__(self, 
                  nombre_erreur_insertion: int, 
                  nombre_erreur_suppression: int, 
@@ -26,41 +37,6 @@ class EditDistance():
         self.taille_tenseur_reference = taille_tenseur_reference
         self.alignements = alignements
     
-    def __str__(self):
-        return "EditDistance(nombre_erreur_insertion={}, nombre_erreur_suppression={}, nombre_erreur_substitution={}, taille_tenseur_reference={}, alignements={})".format(self.nombre_erreur_insertion, self.nombre_erreur_suppression, self.nombre_erreur_substitution, self.taille_tenseur_reference, self.alignements)
-    
-    @property
-    def nombre_erreur_insertion(self):
-        return self._nombre_erreur_insertion
-    @nombre_erreur_insertion.setter
-    def nombre_erreur_insertion(self, nombre_erreur_insertion):
-        assert isinstance(nombre_erreur_insertion, int), "[DEBUG] nombre_erreur_insertion must be an integer. Current type: {}".format(type(nombre_erreur_insertion))
-        self._nombre_erreur_insertion = nombre_erreur_insertion
-
-    @property
-    def nombre_erreur_suppression(self):
-        return self._nombre_erreur_suppression
-    @nombre_erreur_suppression.setter
-    def nombre_erreur_suppression(self, nombre_erreur_suppression):
-        assert isinstance(nombre_erreur_suppression, int), "[DEBUG] nombre_erreur_suppression must be an integer. Current type: {}".format(type(nombre_erreur_suppression))
-        self._nombre_erreur_suppression = nombre_erreur_suppression
-
-    @property
-    def nombre_erreur_substitution(self):
-        return self._nombre_erreur_substitution
-    @nombre_erreur_substitution.setter
-    def nombre_erreur_substitution(self, nombre_erreur_substitution):
-        assert isinstance(nombre_erreur_substitution, int), "[DEBUG] nombre_erreur_substitution must be an integer. Current type: {}".format(type(nombre_erreur_substitution))
-        self._nombre_erreur_substitution = nombre_erreur_substitution
-
-    @property
-    def taille_tenseur_reference(self):
-        assert isinstance(self._taille_tenseur_reference, int), "[DEBUG] taille_tenseur_reference must be an integer. Current type: {}".format(type(self._taille_tenseur_reference))
-        return self._taille_tenseur_reference
-    @taille_tenseur_reference.setter
-    def taille_tenseur_reference(self, taille_tenseur_reference):
-        self._taille_tenseur_reference = taille_tenseur_reference
-
     @property
     def alignements(self):
         return self._alignements
@@ -92,9 +68,9 @@ class EditDistance():
 
         Tests:
         >>> ed = EditDistance(1, 2, 3, 4, [WordAlignement("ins", 1, 2), WordAlignement("del", 2, 3)])
-        >>> ed2 = EditDistance(5, 6, 7, 8, [WordAlignement("ins", 1, 2), WordAlignement("del", 2, 3)])
+        >>> ed2 = EditDistance(5, 6, 7, 8, [WordAlignement("ins", 1, 2), WordAlignement("del", 4, 5)])
         >>> print(ed + ed2)
-        EditDistance(nombre_erreur_insertion=6, nombre_erreur_suppression=8, nombre_erreur_substitution=10, taille_tenseur_reference=12, alignements=[WordAlignement(alignement_type=ins, index_reference=1, index_hypothese=2), WordAlignement(alignement_type=del, index_reference=2, index_hypothese=3), WordAlignement(alignement_type=ins, index_reference=1, index_hypothese=2), WordAlignement(alignement_type=del, index_reference=2, index_hypothese=3)])
+        EditDistance(nombre_erreur_insertion=6, nombre_erreur_suppression=8, nombre_erreur_substitution=10, taille_tenseur_reference=12, alignements=[WordAlignement(alignement_type=ins, index_reference=1, index_hypothese=2), WordAlignement(alignement_type=del, index_reference=2, index_hypothese=3), WordAlignement(alignement_type=ins, index_reference=1, index_hypothese=2), WordAlignement(alignement_type=del, index_reference=4, index_hypothese=5)])
         """
         assert isinstance(other, EditDistance), "[DEBUG] other must be an EditDistance object. Current type: {}".format(type(other))
         return EditDistance(self.nombre_erreur_insertion + other.nombre_erreur_insertion, 
@@ -103,13 +79,17 @@ class EditDistance():
                              self.taille_tenseur_reference + other.taille_tenseur_reference, 
                              deepcopy(self.alignements) + deepcopy(other.alignements))
 
+    def toJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
+
+
 if __name__ == "__main__":
     import doctest; doctest.testmod()
     print(f"[DEBUG] test cleared\n")
     alignements = [WordAlignement("ins", 1, 2), WordAlignement("del", 2, 3)]
     ed = EditDistance(1, 2, 3, 4, alignements)
     ed2 = EditDistance(5, 6, 7, 8, alignements)
-    print(ed + ed2)
+    print(ed.toJson())
 
 
 
