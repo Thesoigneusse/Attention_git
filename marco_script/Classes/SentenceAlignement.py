@@ -42,7 +42,6 @@ class SentenceAlignement():
         assert isinstance(value, str), f"raw_parcorfull_sentence must be a string. Current type: {type(value)}"
         self._raw_parcorfull_sentence = value
     
-<<<<<<< Tabnine <<<<<<<
 from dataclasses import dataclass#+
 from typing import List#+
 #+
@@ -59,5 +58,4 @@ class SentenceAlignement:#+
     unique_token_identifiers_sequence: List[str]#+
     tokenized_parcorfull_sentence: List[WordAlignement]#+
     annotated_system_input_sentence: str#+
->>>>>>> Tabnine >>>>>>># {"conversationId":"ab024ed5-a0fb-4da3-859e-2000dfd65d0d","source":"instruct"}
     
