@@ -25,6 +25,7 @@ _MENTION_LOG = False
 _DEBUG_LOG = True
 _FULL_MATRICE = True
 _DEBUG_WER = False
+_RELOAD_DATA = True
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
 _PUDB=False
 if _PUDB:
@@ -1216,7 +1217,7 @@ def main(args):
     tgt_heads = [int(i) for i in tgt_heads]
 
     system_src_list = args.system_data
-
+    print(' ***')
     print(' * Read {} source sentences'.format(len(src)))
     print(' * Read {} target sentences'.format(len(tgt)))
     print(' ***')
@@ -1236,71 +1237,80 @@ def main(args):
     aligned_src_data_path = f'{_PATH}/Tests/aligned_src_data.json'
     aligned_tgt_data_path = f'{_PATH}/Tests/aligned_tgt_data.json'
 
-    if os.path.exists(disco_src_data_path) and os.path.exists(disco_tgt_data_path):
+    # disco_src_data
+    if os.path.exists(disco_src_data_path) and os.path.exists(disco_tgt_data_path) and not _RELOAD_DATA:
         with open(disco_src_data_path, 'r', encoding='utf-8') as f:
             disco_src_data = json.load(f)
+        print(f" * disco_src_data loaded from json file at path: {disco_src_data_path}")
+
         with open(disco_tgt_data_path, 'r', encoding='utf-8') as f:
             disco_tgt_data = json.load(f)
-        print('[debug] disco_src_data_path and disco_tgt_data loaded from json file')
+        print(f" * disco_tgt_data loaded from json file at path: {disco_tgt_data_path}")
     else:
         disco_src_data, disco_tgt_data = read_discomt_data()
-        print('[debug] disco_src_data_path and disco_tgt_data extract from text file')
+        print(' * disco_src_data_path and disco_tgt_data extract from text file')
+        with open(disco_src_data_path, 'w', encoding='utf-8') as f:
+            json.dump(disco_src_data, f)
+        print(f" * disco_src_data wrote in json file at path: {disco_src_data_path}")
+        with open(disco_tgt_data_path, 'w', encoding='utf-8') as f:
+            json.dump(disco_tgt_data, f)
+        print(f" * disco_tgt_data wrote in json file at path: {disco_tgt_data_path}")
 
-
-    if os.path.exists(news_src_data_path) and os.path.exists(news_tgt_data_path):
+    # news_src_data
+    if os.path.exists(news_src_data_path) and os.path.exists(news_tgt_data_path) and not _RELOAD_DATA:
         with open(news_src_data_path, 'r', encoding='utf-8') as f:
             news_src_data = json.load(f)
+        print(f" * news_src_data loaded from json file at path: {news_src_data_path}")
         with open(news_tgt_data_path, 'r', encoding='utf-8') as f:
             news_tgt_data = json.load(f)
-        print('[debug] news_src_data and news_tgt_data loaded from json file')
+        print(f' * news_tgt_data loaded from json file at path: {news_tgt_data_path}')
     else:
         news_src_data, news_tgt_data = read_news_data()
-        print('[debug] news_src_data and news_tgt_data extract from text file')
-    
+        print(' * news_src_data and news_tgt_data extracted from text file')
+        with open(news_src_data_path, 'w', encoding='utf-8') as f:
+            json.dump(news_src_data, f)
+        print(f" * news_src_data wrote in json file at path: {news_src_data_path}")
+        with open(news_tgt_data_path, 'w', encoding='utf-8') as f:
+            json.dump(news_tgt_data, f)
+        print(f" * news_src_data wrote in json file at path: {news_tgt_data_path}")
 
     print(' * Read {} raw text for DiscoMT data'.format(len(disco_src_data['text'].keys())), flush=True)
-
-    # print('[debug] écriture des données news')
-    # news_src_data, news_tgt_data = read_news_data()
-    # with open('/home/getalp/lopezfab/Bureau/Attention_git/Tests/news_src_data.json', 'w', encoding='utf-8') as f:
-    #     json.dump(news_src_data, f)
-    # with open('/home/getalp/lopezfab/Bureau/Attention_git/Tests/news_tgt_data.json', 'w', encoding='utf-8') as f:
-    #     json.dump(news_tgt_data, f)
-    # print('[debug] news_src_data et news_tgt_data écrit')
-
-
     print(' * Read {} raw text for news data'.format(len(news_src_data['text'].keys())), flush=True)
-   
+
+    # aligned_src_data && aligned_tgt_data
     if os.path.exists(aligned_src_data_path) and os.path.exists(aligned_tgt_data_path):
         with open(aligned_src_data_path, 'r', encoding='utf-8') as f:
-            aligned_src_data_path = json.load(f)
+            classe_aligned_src = json.load(f)
         with open(aligned_tgt_data_path, 'r', encoding='utf-8') as f:
-            aligned_tgt_data_path = json.load(f)
-        print('[debug] aligned_src_data_path and aligned_tgt_data_path loaded from json file')
+            classe_aligned_tgt = json.load(f)
+        print(' * aligned_src_data_path loaded from json file')
+        print(' * aligned_tgt_data_path loaded from json file')
     else:
-        
         # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
         aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  
         print(' *** source side aligned to ParCorFull2 ***', flush=True)
         
         classe_aligned_src = []
-        for src_sentence in aligned_src:
-            classe_aligned_src.append(SentenceAlignement(*src_sentence))
+        for index, src_sentence in enumerate(aligned_src):
+            classe_aligned_src.append(SentenceAlignement(index, *src_sentence))
         with open(aligned_src_data_path, 'w', encoding='utf-8') as f:
             json.dump([src_sentence.toJson() for src_sentence in classe_aligned_src], f)
-        print(f"[debug] écriture de aligned_src au format json au chemin: '{aligned_src_data_path}'")
-        
+
+        print(f" * écriture de aligned_src au format json au chemin: '{aligned_src_data_path}'")
+
         classe_aligned_tgt = []
         aligned_tgt = match_nmt2parcorfull(tgt, disco_tgt_data, news_tgt_data)
-        for tgt_sentence in aligned_tgt:
-            classe_aligned_tgt.append(SentenceAlignement(*tgt_sentence))
+        print(' *** target side aligned to ParCorFull2 ***', flush=True)
+
+        for index, tgt_sentence in enumerate(aligned_tgt):
+            classe_aligned_tgt.append(SentenceAlignement(index, *tgt_sentence))
         with open(aligned_tgt_data_path, 'w', encoding='utf-8') as f:
             json.dump([tgt_sentence.toJson() for tgt_sentence in classe_aligned_tgt], f)
-        print(f"[debug] écriture de aligned_tgt au format json au chemin: '{aligned_tgt_data_path}'")
-        print(' *** target side aligned to ParCorFull2 ***', flush=True)
+        print(f" * écriture de aligned_tgt au format json au chemin: '{aligned_tgt_data_path}'")
     
-    assert len(aligned_src) == len(aligned_tgt)
+    assert len(classe_aligned_src) == len(classe_aligned_tgt)
 
+    print(' ***')
     system_src_data = read_system_src_data( system_src_list, seq_ids=subset_ids )
 
     print(' * Read {} system sentences'.format(len(system_src_data)), flush=True)
