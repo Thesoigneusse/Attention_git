@@ -9,6 +9,7 @@ import xml.etree.cElementTree as ET
 
 import edit_distance
 from Classes.EditDistance import EditDistance
+from Classes.SentenceAlignement import SentenceAlignement
 
 # Activate the following python environment for importing the German BERT:
 # source /home/getalp/dinarelm/anaconda3/bin/activate ssl_wav2vec2_torch18
@@ -1277,12 +1278,27 @@ def main(args):
             aligned_tgt_data_path = json.load(f)
         print('[debug] aligned_src_data_path and aligned_tgt_data_path loaded from json file')
     else:
-        aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
+        
+        # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
+        aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  
         print(' *** source side aligned to ParCorFull2 ***', flush=True)
+        
+        classe_aligned_src = []
+        for src_sentence in aligned_src:
+            classe_aligned_src.append(SentenceAlignement(*src_sentence))
+        with open(aligned_src_data_path, 'w', encoding='utf-8') as f:
+            json.dump([src_sentence.toJson() for src_sentence in classe_aligned_src], f)
+        print(f"[debug] écriture de aligned_src au format json au chemin: '{aligned_src_data_path}'")
+        
+        classe_aligned_tgt = []
         aligned_tgt = match_nmt2parcorfull(tgt, disco_tgt_data, news_tgt_data)
+        for tgt_sentence in aligned_tgt:
+            classe_aligned_tgt.append(SentenceAlignement(*tgt_sentence))
+        with open(aligned_tgt_data_path, 'w', encoding='utf-8') as f:
+            json.dump([tgt_sentence.toJson() for tgt_sentence in classe_aligned_tgt], f)
+        print(f"[debug] écriture de aligned_tgt au format json au chemin: '{aligned_tgt_data_path}'")
         print(' *** target side aligned to ParCorFull2 ***', flush=True)
     
-
     assert len(aligned_src) == len(aligned_tgt)
 
     system_src_data = read_system_src_data( system_src_list, seq_ids=subset_ids )
