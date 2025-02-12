@@ -8,6 +8,7 @@ import argparse
 import xml.etree.cElementTree as ET
 
 import edit_distance
+from Classes.EditDistance import EditDistance
 
 # Activate the following python environment for importing the German BERT:
 # source /home/getalp/dinarelm/anaconda3/bin/activate ssl_wav2vec2_torch18
@@ -24,10 +25,7 @@ _DEBUG_LOG = True
 _FULL_MATRICE = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
-_DATAPATH="/home/getalp/lopezfab/Attention_git/marco_script/data"
 _PUDB=False
-_LOCAL=False
-_PATH= "/home/getalp/lopezfab/Attention_git/" if _LOCAL else "/home/getalp/lopezfab/lig/Attention_git/"
 if _PUDB:
     import pudb; pudb.set_trace()
 parser = argparse.ArgumentParser(description='Performs alignment between corpus (ParCorFul2) data and system data and compute coreference resolution metrics over coreference links using attention weights as scores')
@@ -37,8 +35,11 @@ parser.add_argument('system_data', help='system data, either input or output (sp
 parser.add_argument('--evaluate-language', type=str, default='source', help='Specify which language is evaluated: source (default), target')
 parser.add_argument('--canmt-system', type=str, default='concat', help='Specify which type of CA-NMT is evaluated: concat (default), multienc')
 parser.add_argument('--output-file', type=str, default="./attention_analysis.results", help='Specify the path of the output file')
-parser.add_argument('--pudb', type=str, default="False", help='Scepify the use of pudb for debugging. Default: False')
+parser.add_argument('--pudb', type=str, default="False", help='Specify the use of pudb for debugging. Default: False')
+parser.add_argument('--local', type=str, default="False", help='Specifyif the script is run on the serveurs or not. Default: False')
+
 args = parser.parse_args()
+
 
 wer_threshold = 0.5
 coreference_link_score = 'max'  # 'max' or 'avg', but the script only apply use_avg_score = coreference_link_score == 'avg'
@@ -49,6 +50,11 @@ if args.pudb == "True":
     import pudb; pudb.set_trace()
 if eval_language == 'target':
     wer_threshold = 1000.0
+
+_LOCAL=False if args.local == "False" else True
+_PATH= "/home/getalp/lopezfab/lig/Attention_git/" if _LOCAL else "/home/getalp/lopezfab/Attention_git/"
+_DATAPATH=f"{_PATH}/marco_script/data"
+
 
 def read_txt(filename):
 
@@ -253,8 +259,10 @@ def read_discomt_data():
     word_path = 'Basedata/'
     markable_path = 'Markables/' 
 
-    src_wer = [0, 0, 0, 0]
-    tgt_wer = [0, 0, 0, 0]
+    # src_wer = [0, 0, 0, 0]
+    src_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
+    # tgt_wer = [0, 0, 0, 0]
+    tgt_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
 
     src_data = {}
     tgt_data = {}
@@ -282,9 +290,8 @@ def read_discomt_data():
                 ref = tok_s
                 hyp = s
                 er_vals = edit_distance.str_edit_distance(ref, hyp)
-                for i in range(0, 4):
-                    src_wer[i] += er_vals[i]
-                a = er_vals[4]
+                src_wer += er_vals
+                a  = er_vals.alignements
                 assert len(a) == len(ref.split())
                 src_raw2tok_text[s.strip()] = (tok_s, a)
 
@@ -293,9 +300,8 @@ def read_discomt_data():
                 ref = tok_t
                 hyp = t
                 er_vals = edit_distance.str_edit_distance(ref, hyp)
-                for i in range(0, 4):
-                    tgt_wer[i] += er_vals[i]
-                a = er_vals[4]
+                tgt_wer += er_vals
+                a = er_vals.alignements
                 assert len(a) == len(ref.split())
                 tgt_raw2tok_text[t.strip()] = (tok_t, a)
 
@@ -303,8 +309,8 @@ def read_discomt_data():
     tgt_data['text'] = tgt_raw2tok_text
 
     if _DEBUG_WER:
-        print('[DEBUG-WER] disco-mt corpus source-side raw-to-tokenized WER: {:.2f}'.format(float(sum(src_wer[0:3]))/float(src_wer[3]) *100))
-        print('[DEBUG-WER] disco-mt corpus target-side raw-to-tokenized WER: {:.2f}'.format(float(sum(tgt_wer[0:3]))/float(tgt_wer[3]) *100))
+        print('[DEBUG-WER] disco-mt corpus source-side raw-to-tokenized WER: {:.2f}'.format(src_wer.get_wer() *100))
+        print('[DEBUG-WER] disco-mt corpus target-side raw-to-tokenized WER: {:.2f}'.format(tgt_wer.get_wer() *100))
         sys.stdout.flush()
 
     # 2. Read src and tgt word files
@@ -375,8 +381,8 @@ def read_news_data():
     word_path = 'Basedata/'
     markable_path = 'Markables/'
 
-    src_wer = [0] * 4
-    tgt_wer = [0] * 4
+    src_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
+    tgt_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
 
     src_data = {}
     tgt_data = {}
@@ -401,24 +407,22 @@ def read_news_data():
         ref = tok_s
         hyp = s
         er_vals = edit_distance.str_edit_distance(ref, hyp)
-        for i in range(0, 4):
-            src_wer[i] += er_vals[i]
-        a = er_vals[4]
+        src_wer += er_vals
+        a = er_vals.alignements
         src_raw2tok_data[s] = (tok_s, a)
         tok_t = de_tokenize(t)
         ref = tok_t
         hyp = t
         er_vals = edit_distance.str_edit_distance(ref, hyp)
-        for i in range(0, 4):
-            tgt_wer[i] += er_vals[i]
-        a = er_vals[4]
+        tgt_wer += er_vals
+        a = er_vals.alignements
         tgt_raw2tok_data[t] = (tok_t, a)
     src_data['text'] = src_raw2tok_data
     tgt_data['text'] = tgt_raw2tok_data
 
     if _DEBUG_WER:
-        print('[DEBUG-WER] news corpus source-side raw-to-tokenized WER: {:.2f}'.format(float(sum(src_wer[0:3]))/float(src_wer[3]) *100))
-        print('[DEBUG-WER] news corpus target-side raw-to-tokenized WER: {:.2f}'.format(float(sum(tgt_wer[0:3]))/float(tgt_wer[3]) *100))
+        print('[DEBUG-WER] news corpus source-side raw-to-tokenized WER: {:.2f}'.format(src_wer.get_wer() *100))
+        print('[DEBUG-WER] news corpus target-side raw-to-tokenized WER: {:.2f}'.format(tgt_wer.get_wer() *100))
         sys.stdout.flush()
 
     # 2. Read src and tgt words
@@ -668,13 +672,13 @@ def compute_head_offset(idx, heads):
 
     return res
 
-def find_coref_matches(src_s, sys_s, a):
+def find_coref_matches(src_sentence, sys_sentence, alignements):
     """
-    Using the alignment a, computed with edit-distance, find tokens in the system input/output sentence corresponding to mention tokens in the corresponding gold, corpus sentence.
+    Using the alignment alignements, computed with edit-distance, find tokens in the system input/output sentence corresponding to mention tokens in the corresponding gold, corpus sentence.
 
-    * src_s: contains the raw sentence in the ParCorFull 2 corpus, the tokenized sentence, the sequence of token IDs in the corpus, and the sentence annotated with mentions
-    * sys_s: the system input/output sentence
-    * a: the alignement computed with edit-distance between the tokenized gold sequence (src_s[1]) and the system input/output sequence
+    * src_sentence: contains the raw sentence in the ParCorFull 2 corpus, the tokenized sentence, the sequence of token IDs in the corpus, and the sentence annotated with mentions
+    * sys_sentence: the system input/output sentence
+    * alignements: the alignement computed with edit-distance between the tokenized gold sequence (src_sentence[1]) and the system input/output sequence
 
     Returns a list of triples (as tuples), where elements are respectively:
      - 1. the index of the aligned token in the system input/output sequence
@@ -683,24 +687,36 @@ def find_coref_matches(src_s, sys_s, a):
     """
 
     if _CORPUS_SYSTEM_COREF_MATCHES:
-        print('[DEBUG]find_coref_matches src_s: {}'.format(src_s))
-        print('[DEBUG]find_coref_matches sys_s: {}'.format(sys_s))
+        print('[DEBUG]find_coref_matches src_s: {}'.format(src_sentence))
+        print('[DEBUG]find_coref_matches sys_s: {}'.format(sys_sentence))
         sys.stdout.flush()
 
     sys_coref_idxs = []
-    src_tt = src_s[1].split()
-    crf_tt = src_s[-1].split()
-    sys_tt = sys_s.split()
-    for e in a:
+    src_tokenized_sentence = src_sentence[1].split()
+    src_annoted_sentence = src_sentence[-1].split()
+    sys_tokenized_sentence = sys_sentence.split()
+    for alignement in alignements:
         #print(' *** [DEBUG]-COREF, alignment entry: {}'.format(e))
-        if e[1] is not None and e[2] is not None and crf_tt[e[1]][:2] == '#[' and ']#-set' in crf_tt[e[1]] and sys_tt[e[2]] != '<pad>':
-            set_id = crf_tt[e[1]].split('-')[-1]
+        if alignement.index_reference is not None \
+            and alignement.index_hypothese is not None \
+            and src_annoted_sentence[alignement.index_reference][:2] == '#[' and ']#-set' in src_annoted_sentence[alignement.index_reference] \
+            and sys_tokenized_sentence[alignement.index_hypothese] != '<pad>':
+            set_id = src_annoted_sentence[alignement.index_reference].split('-')[-1]
             assert 'set_' in set_id
-            sys_coref_idxs.append( (e[2], set_id, src_tt[e[1]] == sys_tt[e[2]]) )
+            sys_coref_idxs.append( (alignement.index_hypothese,
+                                    set_id,
+                                    src_tokenized_sentence[alignement.index_reference] == sys_tokenized_sentence[alignement.index_hypothese]
+                                ) )
 
             if _CORPUS_SYSTEM_COREF_MATCHES:
-                print(' * [DEBUG]find_coref_matches COREF-MATCH got ed op {} for mention tokens in entity {}: {} vs. {}'.format(e[0], set_id, src_tt[e[1]] if e[1] is not None else '-', sys_tt[e[2]] if e[2] is not None else '-'))
-                sys.stdout.flush()
+                print(' * [DEBUG]find_coref_matches COREF-MATCH got ed op {} for mention tokens in entity {}: {} vs. {}'.format(
+                        alignement.alignement_type, 
+                        set_id, 
+                        src_tokenized_sentence[alignement.index_reference] if alignement.index_reference is not None else '-', 
+                        sys_tokenized_sentence[alignement.index_hypothese] if alignement.index_hypothese is not None else '-'
+                    ),
+                    flush=True
+                )
     return sys_coref_idxs
 
 def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
@@ -737,7 +753,9 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
     c_tt = sys_c.split()
     annot_info = []
     metrics = [False, False, 0.0]   
-    # 1. Is max weight in the antecedent (any token) ?; 2. Is antecedent att weight > 0.0 (any token) ?; 3. Att weight to the antecedent
+    # 1. Is max weight in the antecedent (any token) ?; 
+    # 2. Is antecedent att weight > 0.0 (any token) ?; 
+    # 3. Att weight to the antecedent
 
     def compute_link_score( weights, avg=False):
         if avg:
@@ -979,7 +997,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
     
     # TODO: Copier le bloc suivant pour traiter full_ctx en dehors du traitement du contexte.
     # def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data):
-    def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, att):
+    def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, att, c2s_wer):
         """_summary_
 
         Args:
@@ -996,17 +1014,16 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                 1: 
         """
         er_vals = edit_distance.str_edit_distance(ctx_s[1], ctx_seq)
-        for i in range(0, 4):
-            c2s_wer[i] += er_vals[i]
+        c2s_wer += er_vals
         er_ctx_seq = clean_for_passER(ctx_seq)
         er_pass = edit_distance.str_edit_distance(ctx_s[1], er_ctx_seq)
-        wer = float(sum(er_pass[0:3]))/float(er_pass[3]) # (nb_ins + nb_del + nb_sub) / len(snt)
-        if wer >= wer_threshold:
-            sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.2f}; Ins: {}, Del: {}, Sub: {}) between reference and system context sentence @{}\n'.format(wer, er_vals[0], er_vals[1], er_vals[2], key))
+        wer = er_pass.get_wer() # (nb_ins + nb_del + nb_sub) / len(snt)
+        if er_pass.get_wer() >= wer_threshold:
+            sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.2f}; Ins: {}, Del: {}, Sub: {}) between reference and system context sentence @{}\n'.format(er_pass.get_wer(), er_vals.nombre_erreur_insertion, er_vals.nombre_erreur_suppression, er_vals.nombre_erreur_substitution, key))
             sys.stderr.write(' *   Ref: {}\n'.format(ctx_s[1]))
             sys.stderr.write(' *   Sys: {}\n'.format(ctx_seq))
             sys.exit(0)
-        a = er_vals[4] # Alignement entre les phrases
+        a = er_vals.alignements # Alignement entre les phrases
 
         if _CORPUS_SYSTEM_COMPARISON_LOG:
             print(' * [DEBUG] ANALYSIS@{} ctx-gold: {}'.format(key, ctx_s[1]))
@@ -1024,7 +1041,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
         return (key, coref_res)
 
         
-    c2s_wer = [0] * 4
+    c2s_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
 
     offset = 0
     cur_bogus_idx = 0 if canmt_system == 'concat' else 1
@@ -1091,17 +1108,16 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                     sys.stdout.flush()
 
                 er_vals = edit_distance.str_edit_distance(src_s[1], cur_seq)
-                for i in range(0, 4):
-                    c2s_wer[i] += er_vals[i]
+                c2s_wer += er_vals
                 er_cur_seq = clean_for_passER(cur_seq)
                 er_pass = edit_distance.str_edit_distance(src_s[1], er_cur_seq)
-                wer = float(sum(er_pass[0:3]))/float(er_pass[3])
+                wer = er_pass.get_wer()
                 if wer >= wer_threshold:
                     sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.3f}) between reference and system current sentence @{}\n'.format(wer, key))
                     sys.stderr.write(' *   Ref: {}\n'.format(src_s[1]))
                     sys.stderr.write(' *   Sys: {}\n'.format(er_cur_seq))
                     sys.exit(0)
-                a = er_vals[4]
+                a = er_vals.alignements
                 alignments.append( a )
 
                 if _DEBUG_LOG:
@@ -1136,7 +1152,7 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                                     #     for i in range(len(ctx_s)):
                                     #         full_ctx_s[i] += ctx_s[i]
                                     # else:
-                                        analysis_results.append(something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data[key]['att']) )
+                                        analysis_results.append(something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data[key]['att'], c2s_wer) )
                     if _FULL_MATRICE : # Si on étudie l'attention crt x [k3,k2,k1] alors on doit fusionner les éléments
                         ctx_seq = system_data[key]['ctx']
                         ctx_seq = safe_clean(ctx_seq)
@@ -1171,9 +1187,9 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, heads=None, seq_ids=
                                     
                             if full_ctx_seq.split() != [] and len(ctx_s) > 0:
                                 idx_old = idx
-                                analysis_results.append(something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, system_data[system_data_key]['att']))
-    if _DEBUG_LOG and c2s_wer[3] > 0:
-        print('[DEBUG-KEY] corpus vs. system sentences WER: {:.2f}'.format( float(sum(c2s_wer[:3]))/float(c2s_wer[3]) ))
+                                analysis_results.append(something(full_ctx_s, full_ctx_seq, cur_seq, sys_cur_corefs, key, system_data[system_data_key]['att'], c2s_wer))
+    if _DEBUG_LOG and c2s_wer.taille_tenseur_reference > 0:
+        print('[DEBUG-KEY] corpus vs. system sentences WER: {:.2f}'.format( c2s_wer.get_wer() ))
         sys.stdout.flush()
 
     return analysis_results, token_identity_level
@@ -1215,7 +1231,9 @@ def main(args):
     disco_src_data_path = f'{_PATH}/Tests/disco_src_data.json'
     disco_tgt_data_path = f'{_PATH}/Tests/disco_tgt_data.json'
     news_src_data_path = f'{_PATH}/Tests/news_src_data.json'
-    news_tgt_data_path = f'{_PATH}Tests/news_tgt_data.json'
+    news_tgt_data_path = f'{_PATH}/Tests/news_tgt_data.json'
+    aligned_src_data_path = f'{_PATH}/Tests/aligned_src_data.json'
+    aligned_tgt_data_path = f'{_PATH}/Tests/aligned_tgt_data.json'
 
     if os.path.exists(disco_src_data_path) and os.path.exists(disco_tgt_data_path):
         with open(disco_src_data_path, 'r', encoding='utf-8') as f:
@@ -1239,8 +1257,7 @@ def main(args):
         print('[debug] news_src_data and news_tgt_data extract from text file')
     
 
-    print(' * Read {} raw text for DiscoMT data'.format(len(disco_src_data['text'].keys())))
-    sys.stdout.flush()
+    print(' * Read {} raw text for DiscoMT data'.format(len(disco_src_data['text'].keys())), flush=True)
 
     # print('[debug] écriture des données news')
     # news_src_data, news_tgt_data = read_news_data()
@@ -1251,21 +1268,26 @@ def main(args):
     # print('[debug] news_src_data et news_tgt_data écrit')
 
 
-    print(' * Read {} raw text for news data'.format(len(news_src_data['text'].keys())))
+    print(' * Read {} raw text for news data'.format(len(news_src_data['text'].keys())), flush=True)
    
-    aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
-    print(' *** source side aligned to ParCorFull2 ***')
-    sys.stdout.flush()
+    if os.path.exists(aligned_src_data_path) and os.path.exists(aligned_tgt_data_path):
+        with open(aligned_src_data_path, 'r', encoding='utf-8') as f:
+            aligned_src_data_path = json.load(f)
+        with open(aligned_tgt_data_path, 'r', encoding='utf-8') as f:
+            aligned_tgt_data_path = json.load(f)
+        print('[debug] aligned_src_data_path and aligned_tgt_data_path loaded from json file')
+    else:
+        aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
+        print(' *** source side aligned to ParCorFull2 ***', flush=True)
+        aligned_tgt = match_nmt2parcorfull(tgt, disco_tgt_data, news_tgt_data)
+        print(' *** target side aligned to ParCorFull2 ***', flush=True)
+    
 
-    aligned_tgt = match_nmt2parcorfull(tgt, disco_tgt_data, news_tgt_data)
     assert len(aligned_src) == len(aligned_tgt)
-    print(' *** target side aligned to ParCorFull2 ***')
-    sys.stdout.flush()
 
     system_src_data = read_system_src_data( system_src_list, seq_ids=subset_ids )
 
-    print(' * Read {} system sentences'.format(len(system_src_data)))
-    sys.stdout.flush()
+    print(' * Read {} system sentences'.format(len(system_src_data)), flush=True)
 
     analyzed_ref = aligned_src
     analyzed_hyp = system_src_data

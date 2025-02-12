@@ -3,6 +3,8 @@ import os
 import sys
 import torch
 
+from Classes.EditDistance import EditDistance
+from Classes.WordAlignement import WordAlignement
 __ed_dict__ = {} # Dictionnaire de token produit par Marco
 
 def str_edit_distance(str_ref, str_hyp, model=None, tokenizer=None):
@@ -15,12 +17,8 @@ def str_edit_distance(str_ref, str_hyp, model=None, tokenizer=None):
         tokenizer (_type_, optional): _description_. Defaults to None. Not Used
 
     Returns:
-        tuple contenant en index:
-            0: nombre d'erreur insertion
-            1: nombre d'erreur suppression
-            2: nombre d'erreur substitution
-            3: taille du tenseur attribué à la référence
-            4: alignement entre référence et prédiction à partir du dictionnaire de tokens de Marco
+        EditDistance: Objet EditDistance contenant le nombre d'erreur d'insertion, de suppression et de substitution
+                        ainsi que la taille du tenseur de référence et la liste des alignements
     """
     global __ed_dict__
     if len(__ed_dict__) > 100000:   # NOTE: avoid the dictionary size to increase too much
@@ -74,50 +72,70 @@ def str_edit_distance(str_ref, str_hyp, model=None, tokenizer=None):
 
         if tsr_ed_matrix[i-1,j] < tsr_ed_matrix[i,j-1]:
             if tsr_ed_matrix[i-1,j] < tsr_ed_matrix[i-1,j-1]:
-                alignement.append( ('del', back_track_i-1, None) )
+                alignement.append( WordAlignement(alignement_type='del', 
+                                                  index_reference=back_track_i-1, 
+                                                  index_hypothese=None) )
                 n_del += 1
                 back_track_i -= 1
             else:
                 back_track_i -= 1
                 back_track_j -= 1
-                alignement.append( ('match', back_track_i, back_track_j) )
+                alignement.append( WordAlignement(alignement_type='match', 
+                                                  index_reference=back_track_i, 
+                                                  index_hypothese=back_track_j) )
                 if tmp_weight > 0:
                     n_sub += 1
-                    alignement[-1] = ('sub', alignement[-1][1], alignement[-1][2])
+                    alignement[-1] = WordAlignement(alignement_type='sub', 
+                                                    index_reference=alignement[-1].index_reference, 
+                                                    index_hypothese=alignement[-1].index_hypothese)
 
         else:   # tsr_ed_matrix[i-1,j] >= tsr_ed_matrix[i,j-1]
             if tsr_ed_matrix[i,j-1] < tsr_ed_matrix[i-1,j-1]:
-                alignement.append( ('ins', back_track_i-1, back_track_j-1) )
+                alignement.append( WordAlignement(alignement_type='ins', 
+                                                  index_reference=back_track_i-1, 
+                                                  index_hypothese=back_track_j-1) )
                 n_ins += 1
                 back_track_j -= 1
             else:
                 back_track_i -= 1
                 back_track_j -= 1
-                alignement.append( ('match', back_track_i, back_track_j) )
+                alignement.append( WordAlignement(alignement_type='match', 
+                                                  index_reference=back_track_i, 
+                                                  index_hypothese=back_track_j) )
                 if tmp_weight > 0:
                     n_sub += 1
-                    alignement[-1] = ('sub', alignement[-1][1], alignement[-1][2])
+                    alignement[-1] = WordAlignement(alignement_type='sub',
+                                                    index_reference=alignement[-1].index_reference, 
+                                                    index_hypothese=alignement[-1].index_hypothese)
 
     #print('[DEBUG] i and j before last phase: {}, {}'.format(back_track_i, back_track_j))
 
     while back_track_i > 0:
         #print('[DEBUG] adding del, {}, -'.format(back_track_i-1))
 
-        alignement.append( ('del', back_track_i-1, None) )
+        alignement.append( WordAlignement(alignement_type='del', 
+                                          index_reference=back_track_i-1, 
+                                          index_hypothese=None) )
         back_track_i -= 1
         n_del += 1
 
     while back_track_j > 0:
         #print('[DEBUG] adding ins, {}, {}'.format(back_track_i-1, back_track_j-1))
 
-        alignement.append( ('ins', back_track_i, back_track_j-1) )
+        alignement.append( WordAlignement(alignement_type='ins', 
+                                          index_reference=back_track_i, 
+                                          index_hypothese=back_track_j-1) )
         back_track_j -= 1
         n_ins += 1
 
     #print('[DEBUG] alignement before reverse: {}'.format(alignement))
 
     alignement.reverse()
-    return (n_ins, n_del, n_sub, curr_x_size, alignement)
+    return EditDistance(nombre_erreur_insertion=n_ins,
+                         nombre_erreur_suppression= n_del,
+                         nombre_erreur_substitution=n_sub, 
+                         taille_tenseur_reference=curr_x_size, 
+                         alignements=alignement)
     
 
 def main(args):
@@ -132,17 +150,17 @@ def main(args):
 
     er_vals = str_edit_distance(ref_str, hyp_str)
 
-    print(' * ER: {:.2f}'.format(sum(er_vals[:3])/er_vals[3]))
+    print(' * ER: {:.2f}'.format(er_vals.get_wer()))# sum(er_vals[:3])/er_vals[3]))
     print(' * Errors:')
-    print(' * ins: {}'.format(er_vals[0]))
-    print(' * del: {}'.format(er_vals[1]))
-    print(' * sub: {}'.format(er_vals[2]))
+    print(' * ins: {}'.format(er_vals.nombre_erreur_insertion))
+    print(' * del: {}'.format(er_vals.nombre_erreur_suppression))
+    print(' * sub: {}'.format(er_vals.nombre_erreur_substitution))
     print(' ---')
 
     rtoks = ref_str.split()
     htoks = hyp_str.split()
-    alignement = er_vals[4]
-    print( '* Alignement:' )
+    alignement = er_vals.alignements
+    print( '* WordAlignement:' )
     for t in alignement:
         print(' * {}) r:{}, h:{}'.format(t[0], rtoks[t[1]], htoks[t[2]] if t[2] is not None else '-'))
     print(' ---')
@@ -150,4 +168,3 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
-
