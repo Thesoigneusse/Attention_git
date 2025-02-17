@@ -80,7 +80,13 @@ class EditDistance():
                              self.alignements + other.alignements)
 
     def toJson(self) -> dict:
-        return asdict(self)
+        return {'__EditDistance__': asdict(self)}
+
+    @classmethod
+    def fromJson(cls, data):
+        return cls(**data)
+
+
 
 if __name__ == "__main__":
     import doctest; doctest.testmod()
