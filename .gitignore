@@ -17,4 +17,4 @@ marco_script/Classes/CorpusSentence.py
 marco_script/test.ipynb
 test.json
 output_debug.txt
-marco_script/match-nmt2parcorfull.py
+Output/debug_metrics.results
