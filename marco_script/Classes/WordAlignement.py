@@ -31,7 +31,13 @@ class WordAlignement():
         self._alignement_type = value
 
     def toJson(self) -> dict:
-        return asdict(self)
+        return {'__WordAlignement__': asdict(self)}
+
+    @classmethod
+    def fromJson(cls, data):
+        return cls(**data)
+
+
 
     def to_list(self) -> list:
         """Retourne l'alignement du mot entre la phrase de référence et la phrase hypothèse sous forme de liste (ancien format de marco)
