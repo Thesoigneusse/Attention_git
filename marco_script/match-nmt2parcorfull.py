@@ -13,7 +13,9 @@ import edit_distance
 from Classes.EditDistance import EditDistance
 from Classes.SentenceAlignement import SentenceAlignement
 from Classes.WordAlignement import WordAlignement
-
+from Classes.CoreferenceMatch import CoreferenceMatch
+from Classes.SystemOutput import SystemOutput
+from Classes.WeightAnalysisMetric import WeightAnalysisMetric
 
 # Activate the following python environment for importing the German BERT:
 # source /home/getalp/dinarelm/anaconda3/bin/activate ssl_wav2vec2_torch18
@@ -28,6 +30,7 @@ _CORPUS_SYSTEM_COMPARISON_LOG = False
 _MENTION_LOG = False
 _DEBUG_LOG = True
 _FULL_MATRICE = True
+_DEBUG = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
 _PUDB=False
@@ -663,10 +666,11 @@ def match_nmt2parcorfull(src_nmt, disco_src_pcf, news_src_pcf):
 def read_system_src_data(src_list, seq_ids=None):
     """
     Reads in system data.
-    Returns a dictionary where keys are the sentence IDs (e.g. 102-1, 102-2, etc.) and values are themselves dictionaries containing:
-     1. key 'cur': current input/output sentence
-     2. key 'ctx': context input/output sentence
-     3. key 'att': matrix of attention weights between current and context sentence
+    Returns a dictionary where keys are the sentence IDs (e.g. 102-1, 102-2, etc.) 
+        and values are themselves SystemOutput object containing:
+        1. current_sentence: current input/output sentence
+        2. context_sentence: context input/output sentence
+        3. matrice 'att': matrix of attention weights between current and context sentence
     """
 
     f = open(src_list, encoding='utf-8')
@@ -694,7 +698,9 @@ def read_system_src_data(src_list, seq_ids=None):
 
         if seq_ids is None or seq_id in seq_ids:
             assert seq_id not in system_data
-            system_data[seq_id] = {'cur': cur_seq, 'ctx': ctx_seq, 'att': weights}
+            system_data[seq_id] = SystemOutput(current_sentence= cur_seq,
+                                                context_sentence= ctx_seq, 
+                                                attention_matrice= weights)
 
             for ww in weights:
                 for ctx_idx, ctx_tok in enumerate(ctx_seq.split()):
@@ -719,7 +725,7 @@ def compute_head_offset(idx, heads):
 
     return res
 
-def find_coref_matches(src_sentence: SentenceAlignement, sys_sentence, alignements) -> List[tuple]:
+def find_coref_matches(src_sentence: SentenceAlignement, sys_sentence: str, alignements) -> List[CoreferenceMatch]:
     """
     Using the alignment alignements, computed with edit-distance, 
     find tokens in the system input/output sentence corresponding 
@@ -732,10 +738,10 @@ def find_coref_matches(src_sentence: SentenceAlignement, sys_sentence, alignemen
     * alignements: the alignement computed with edit-distance between 
       the tokenized gold sequence (src_sentence[1]) and the system input/output sequence
 
-    Returns a list of triples (as tuples), where elements are respectively:
-     - 1. the index of the aligned token in the system input/output sequence
-     - 2. the set_id of the mention (the cluster)
-     - 3. True if the aligned token is identical to the token in the gold sentence.
+    Returns a list of CoreferenceMatch, where each CoreferenceMatch contains:
+     - aligned_token_index (int) the index of the aligned token in the system input/output sequence
+     - mention_set_id (str) the set_id of the mention (the cluster)
+     - is_aligned_token_identical_in_gold_sentence (bool) True if the aligned token is identical to the token in the gold sentence.
     """
 
     if _CORPUS_SYSTEM_COREF_MATCHES:
@@ -755,9 +761,9 @@ def find_coref_matches(src_sentence: SentenceAlignement, sys_sentence, alignemen
             and sys_tokenized_sentence[alignement.index_hypothese] != '<pad>':
             set_id = src_annoted_sentence[alignement.index_reference].split('-')[-1]
             assert 'set_' in set_id
-            sys_coref_idxs.append( (alignement.index_hypothese,
-                                    set_id,
-                                    src_tokenized_sentence[alignement.index_reference] == sys_tokenized_sentence[alignement.index_hypothese]
+            sys_coref_idxs.append( CoreferenceMatch(aligned_token_index= alignement.index_hypothese,
+                                    mention_set_id= set_id,
+                                    is_aligned_token_identical_in_gold_sentence = src_tokenized_sentence[alignement.index_reference] == sys_tokenized_sentence[alignement.index_hypothese]
                                 ) )
 
             if _CORPUS_SYSTEM_COREF_MATCHES:
@@ -794,17 +800,14 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
         tupple: tuple dont:
             0: system current sentence
             1: system context sentence
-            2: metrics : List of éléments:
-                0: (booléen) default to True
-                1: link_score >= all_lines_max_weight
-                2: sum(all_weights) > 0.0
-                3: link_score
+            2: metrics : List of WeightAnalysisMetric contenant :
+                1. is_link_score_line_max (bool): True if the weight on the right antedent is the max weight
+                2. is_sum_all_weight_superior_to_zero (bool): True if the sum of all weight is superior to 0.0,
+                3. link_score (float): value of the link score to the right antedent
     """
     
     s_tt = sys_s.split()
     c_tt = sys_c.split()
-    annot_info = []
-    metrics = [False, False, 0.0]   
     # 1. Is max weight in the antecedent (any token) ?; 
     # 2. Is antecedent att weight > 0.0 (any token) ?; 
     # 3. Att weight to the antecedent
@@ -817,58 +820,73 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
 
     def get_mentions( corefs ):
         """
-        corefs is the data struct constructed by the find_coref_matches function, it is a list containing triples, where each triple contains:
+        corefs is the data struct constructed by the find_coref_matches function, it is a list 
+            containing triples, where each triple contains:
         - the index of the token in the system input/output sentence belonging to a mention
         - the set ID of the mention
-        - True if the token is identical to the corresponding token in the reference corpus sentence as from alignment with edit-distance, False otherwise.
+        - True if the token is identical to the corresponding token in the reference corpus sentence 
+            as from alignment with edit-distance, False otherwise.
         
         Return:
-        
+            (dict): {
+                key= mention_set_id (str) : [
+                    [(int) indices consécutifs des tokens de la mention 1 faisant référence à une entité],
+                    [(int) indices consécutifs des tokens de la mention 2 faisant référence à une entité],
+                    ...
+                ],
+                ...
+            }
         """
 
         if len(corefs) == 0:
             return {}
 
-        start = corefs[0][0]
-        cid = corefs[0][1]
+        start = corefs[0].aligned_token_index
+        cid = corefs[0].mention_set_id
         entities = {}
         curr_idxs = []
 
         if len(corefs) == 1:
             #assert corefs[0][2] # why I assert this ?
-            entities[corefs[0][1]] = [[corefs[0][0]]]
+            entities[corefs[0].mention_set_id] = [[corefs[0].aligned_token_index]]
         else:
             #if corefs[0][2]:    # NOTE: if the token is identical to the corresponding reference sentence token...
-            curr_idxs.append( corefs[0][0] )
+            curr_idxs.append( corefs[0].aligned_token_index )
 
         for i in range(1, len(corefs)):
-            if corefs[i-1][0] != corefs[i][0]-1 or corefs[i-1][1] != corefs[i][1]:  # NOTE: detect begin of a new mention: either token indices are not adjacent, or set IDs are different
-                if corefs[i-1][1] not in entities:
-                    entities[corefs[i-1][1]] = []
+            if corefs[i-1].aligned_token_index != corefs[i].aligned_token_index-1 \
+                or corefs[i-1].mention_set_id != corefs[i].mention_set_id:  
+                # NOTE: detect begin of a new mention: either token indices are not adjacent,
+                #       or set IDs are different
+                if corefs[i-1].mention_set_id not in entities:
+                    entities[corefs[i-1].mention_set_id] = []
                 if len(curr_idxs) > 0:
-                    entities[corefs[i-1][1]].append( curr_idxs )
-                start = corefs[i][0]
+                    entities[corefs[i-1].mention_set_id].append( curr_idxs )
+                start = corefs[i].aligned_token_index
                 curr_idxs = [start]
             if i == len(corefs)-1:  # NOTE: last token
-                if corefs[i-1][0] != corefs[i][0]-1 or corefs[i-1][1] != corefs[i][1]:  # NOTE: same as above, detect begin of a new mention
-                    assert start == corefs[i][0] and len(curr_idxs) == 1, 'start: {} vs. corefs[i][0]: {}; len(curr_idxs): {}'.format(start, corefs[i][0], len(curr_idxs))
-                    if corefs[i][1] not in entities:
-                        entities[corefs[i][1]] = []
+                if corefs[i-1].aligned_token_index != corefs[i].aligned_token_index-1 \
+                    or corefs[i-1].mention_set_id != corefs[i].mention_set_id: 
+                    # NOTE: same as above, detect begin of a new mention
+                    assert start == corefs[i].aligned_token_index and len(curr_idxs) == 1, \
+                        'start: {} vs. corefs[i][0]: {}; len(curr_idxs): {}'.format(start, corefs[i].aligned_token_index, len(curr_idxs))
+                    if corefs[i].mention_set_id not in entities:
+                        entities[corefs[i].mention_set_id] = []
                     #if corefs[i][2]:    # NOTE: if the token is identical to the corresponding reference sentence token...
-                    curr_idxs = [corefs[i][0]]
+                    curr_idxs = [corefs[i].aligned_token_index]
                     #if len(curr_idxs) > 0:
-                    entities[corefs[i][1]].append( curr_idxs )
+                    entities[corefs[i].mention_set_id].append( curr_idxs )
                     curr_idxs = []  # Not needed!
                 else:
-                    if corefs[i][1] not in entities:
-                        entities[corefs[i][1]] = []
+                    if corefs[i].mention_set_id not in entities:
+                        entities[corefs[i].mention_set_id] = []
                     #if corefs[i][2]:    # NOTE: if the token is identical to the corresponding reference sentence token...
-                    curr_idxs.append( corefs[i][0] )
+                    curr_idxs.append( corefs[i].aligned_token_index )
                     #if len(curr_idxs) > 0:
-                    entities[corefs[i][1]].append( curr_idxs )
+                    entities[corefs[i].mention_set_id].append( curr_idxs )
 
             #if corefs[i][2]:    # NOTE: if the token is identical to the corresponding reference sentence token...
-            curr_idxs.append( corefs[i][0] )
+            curr_idxs.append( corefs[i].aligned_token_index )
 
         if _DEBUG_LOG:
             print('[DEBUG] get_mentions, found mentions (num. of mentions: {}): {}'.format(len(entities), entities))
@@ -946,7 +964,6 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
                 
                 for ctx_mnt in ctx_mentions[cur_cid]:
                     # NOTE: a new metrics entry is added for each link from any mention in the current sentence to any mention in the context sentence
-                    metrics.append( [True, False, False, 0.0] )
 
                     all_weights = []
                     all_lines_max_weight = 0.0
@@ -956,92 +973,30 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
                             all_lines_max_weight = cur_line_max_weight
                         for j in ctx_mnt:
                             all_weights.append( att[i][j] )
+
                     link_score = compute_link_score( all_weights, avg=use_avg_score)
-                    if link_score >= all_lines_max_weight:
-                        metrics[-1][1] = True
-                    metrics[-1][2] = sum(all_weights) > 0.0
-                    metrics[-1][3] = link_score
+                    is_link_score_line_max= link_score >= all_lines_max_weight
+                    is_sum_all_weight_superior_to_zero= sum(all_weights) > 0.0
+
+                    metrics.append(WeightAnalysisMetric(link_score= link_score, 
+                                                        is_link_score_line_max= is_link_score_line_max,
+                                                        is_sum_all_weight_superior_to_zero= is_sum_all_weight_superior_to_zero))
+                    
 
     ############################
     return sys_s, sys_c, metrics
     ############################
 
-    metrics = []
-    cid = []
-    cidx = []
-    coref_links_by_ID = {}
+def safe_clean(seq):
+    res = seq.replace('&apos;', '\'')
+    res = res.replace('&quot;', '"')
+    res = res.replace('&#91;', '[')
+    res = res.replace('&#93;', ']')
+    res = res.replace('&amp;', '\&')
 
-    for sc in s_corefs:
+    return res.strip()
 
-        if len(cid) == 0 or cid[-1] != sc[1] or cidx[-1] != sc[0]-1: 
-            metrics.append( [False, False, False, 0.0] )    # NOTE: first element is set_id match, only in this case this is an annotated gold coreference. See above for the other 3 values
-        cid.append( sc[1] )
-        cidx.append( sc[0] )
-
-        max_att = 0.0
-        n_att = 0
-        for cc in c_corefs:
-            if sc[1] == cc[1]:
-                metrics[-1][0] = True
-                metrics[-1][2] = metrics[-1][2] or att[sc[0]][cc[0]] != 0.0
-                if use_avg_score:
-                    max_att += att[sc[0]][cc[0]]
-                    n_att += 1
-                else:
-                    if att[sc[0]][cc[0]] > max_att:
-                        max_att = att[sc[0]][cc[0]]
-                print('[DEBUG] COREF-LINK, found coreference link: id {}, tokens {} <-> {}, weight: {}'.format(sc[1], s_tt[sc[0]], c_tt[cc[0]], att[sc[0]][cc[0]]))
-        if use_avg_score:
-            annot_info.append( (sc[0], sc[1], max_att / n_att if n_att > 0 else 0.0) )
-        else:
-            annot_info.append( (sc[0], sc[1], max_att) )
-        line_max = max(att[sc[0]])
-        metrics[-1][1] = metrics[-1][1] or max_att >= line_max
-        if max_att > metrics[-1][3]:
-            metrics[-1][3] = max_att
-
-    #metrics = [int(metrics[0]), int(metrics[1]), metrics[2]]
-    for i in range(len(metrics)):
-        metrics[i] = [int(metrics[i][0]), int(metrics[i][1]), int(metrics[i][2]), metrics[i][3]]
-    for e in annot_info:
-        if s_tt[e[0]][:2] != '#[':
-            s_tt[e[0]] = '#[' + s_tt[e[0]] + ']#:' + e[1] + '-att:' + str(e[2])
-    for e in c_corefs:
-        if c_tt[e[0]][:2] != '#[':
-            c_tt[e[0]] = '#[' + c_tt[e[0]] + ']#:' + e[1]
-
-    print('[DEBUG] COREF-LINK, cur seq: {}'.format(' '.join(s_tt)))
-    print('[DEBUG] COREF-LINK, ctx seq: {}'.format(' '.join(c_tt)))
-    print('[DEBUG] COREF-LINK, metrics: {}'.format(metrics))
-
-    return ' '.join(s_tt), ' '.join(c_tt), metrics
-
-def analyze_and_evaluate(align_data, system_data, ctx_size, seq_ids=None):
-    """_summary_
-
-    Args:
-        align_data (List[SentenceAlignement]): system source/target reference data aligned to the ParCorFull2 corpus
-        system_data (_type_): _description_
-        ctx_size (_type_): number of context sentences used by the model (usually 3 with Lorenzo's models)
-        seq_ids (_type_, optional): _description_. Defaults to None.
-    """
-    """
-    ***align_data***: system source/target reference data aligned to the ParCorFull2 corpus
-    ***system_data***: system source/target data (generated data in case of target; reference data in case of source, but with a diffenret tokenization, and thus needing re-alignmeent)
-    ***ctx_size***: number of context sentences used by the model (usually 3 with Lorenzo's models)
-    ***seq_ids***: IDs of sequences to process. If None all sequences are analyzed. This is used for example to select only the sentences of the set constructed by Dimitra (see the import in the main function).
-    """
-
-    def safe_clean(seq):
-        res = seq.replace('&apos;', '\'')
-        res = res.replace('&quot;', '"')
-        res = res.replace('&#91;', '[')
-        res = res.replace('&#93;', ']')
-        res = res.replace('&amp;', '\&')
-
-        return res.strip()
-
-    def clean_for_passER(seq):
+def clean_for_passER(seq):
 
         res = safe_clean(seq)
         res = res.replace(' @-@ ', '-')
@@ -1054,226 +1009,182 @@ def analyze_and_evaluate(align_data, system_data, ctx_size, seq_ids=None):
 
         return res.strip()
     
-    # TODO: Copier le bloc suivant pour traiter full_ctx en dehors du traitement du contexte.
-    # def something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data):
-    def something(contexte_sentence: SentenceAlignement, ctx_seq, cur_seq, sys_cur_corefs, key, att, c2s_wer):
-        """_summary_
+def id_corpus_to_system_output(index_corpus: int) -> int:
+    """Retourne la valeur de l'index de corpus shiftée pour être égale à la valeur de l'output du system
 
-        Args:
-            contexte_sentence (_type_): _description_
-            ctx_seq (_type_): _description_
-            cur_seq (_type_): _description_
-            sys_cur_corefs (_type_): _description_
-            key (_type_): _description_
-            system_data (_type_): _description_
+    Args:
+        index_corpus (int): valeur de l'index de la phrase dans le corpus
 
-        Returns:
-            tuple: paire dont 
-                0: le premier élément est la clé de la matrice d'attention
-                1: 
-        """
-        er_vals = edit_distance.str_edit_distance(contexte_sentence.raw_parcorfull_sentence, ctx_seq)
-        c2s_wer += er_vals
-        er_ctx_seq = clean_for_passER(ctx_seq)
-        er_pass = edit_distance.str_edit_distance(contexte_sentence.raw_parcorfull_sentence, er_ctx_seq)
-        if er_pass.get_wer() >= wer_threshold:
-            sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.2f}; Ins: {}, Del: {}, Sub: {}) between reference and system context sentence @{}\n'.format(er_pass.get_wer(), er_vals.nombre_erreur_insertion, er_vals.nombre_erreur_suppression, er_vals.nombre_erreur_substitution, key))
-            sys.stderr.write(' *   Ref: {}\n'.format(contexte_sentence.raw_parcorfull_sentence))
-            sys.stderr.write(' *   Sys: {}\n'.format(ctx_seq))
-            sys.exit(0)
-
-        if _CORPUS_SYSTEM_COMPARISON_LOG:
-            print(' * [DEBUG] ANALYSIS@{} ctx-gold: {}'.format(key, contexte_sentence.raw_parcorfull_sentence))
-            print(' * [DEBUG] ANALYSIS@{} ctx-syst: {}'.format(key, ctx_seq))
-            print(' * [DEBUG] **********')
-            if _DEBUG_LOG:
-                print(' * [DEBUG] ANALYSIS@{} context alignment: {}'.format(key, er_vals.alignements))
-            sys.stdout.flush()
-
-        sys_ctx_corefs = find_coref_matches(contexte_sentence, ctx_seq, er_vals.alignements)
-        for scc in sys_ctx_corefs:
-            token_identity_level.append( int(scc[2]) )
-        # coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, system_data[key]['att'])
-        coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, att)
-        ic(coref_res)
-        return (key, coref_res)
-
-    def id_corpus_to_system_output(index_corpus: int) -> int:
-        """Retourne la valeur de l'index de corpus shiftée pour être égale à la valeur de l'output du system
-
-        Args:
-            index_corpus (int): valeur de l'index de la phrase dans le corpus
-
-        Returns:
-            int: valeur de l'index correspondant dans l'output du system
-        """
-        # Tête de document où le shift augmente
-        heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2044, 2075, 2108, 2123, 2153, 2191, 2214, 2245, 2262, 2280]    
-        offset = 0
-        while index_corpus > heads[offset]:
-            offset += 1
-        return index_corpus
-    
-    c2s_wer = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
-
+    Returns:
+        int: valeur de l'index correspondant dans l'output du system
+    """
+    # Tête de document où le shift augmente
+    heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2044, 2075, 2108, 2123, 2153, 2191, 2214, 2245, 2262, 2280]    
     offset = 0
-    cur_bogus_idx = 0 if canmt_system == 'concat' else 1
-    alignments = []
-    analysis_results = []
-    token_identity_level = []
-    idx_old = 0
-    k = 1 if canmt_system == 'concat' else -1
-    heads = [186, 335, 457, 690, 792, 1034, 1268, 1420, 1610, 1755, 1782, 1814, 1863, 1910, 1932, 1958, 1989, 2009, 2044, 2075, 2108, 2123, 2153, 2191, 2214, 2245, 2262, 2280]
-    for idx, source_sentence in enumerate(align_data):
-        k = min(k+1, 3)
-        #offset_idx = compute_head_offset(idx, src_heads)
-        if idx >= 0: # and idx < 2127:
-            if idx in heads:
-                offset += 1
-                k= -1
-            # 1. Only for the 100 sentences subset
-            if seq_ids is not None:
-                if idx >= 186:
-                    offset = 1
-                if offset >= 336:
-                    offset = 2
-            # ------------------------------------
-            cur_bogus_idx = k
-            skip = False
-            if seq_ids is None:
-                key = str(offset+idx) + '-' + str(cur_bogus_idx)
-                if key not in system_data:
-                    skip = True
-                else:
-                    cur_seq = system_data[key]['cur']
-                    if idx - idx_old > 1 or cur_seq == '<pad> <end>' or cur_seq == '<END>' or cur_seq == '( EN ) <END>':
-                        # offset += 1
-                        if _DEBUG_LOG:
-                            print('[DEBUG] offset increased to {} at id {}'.format(offset, idx))
-                            sys.stdout.flush()
-            else:
-                found = False
-                for bb_idx in range(1, ctx_size+1):
-                    key = str(offset+idx) + '-' + str(bb_idx)
-                    if key in system_data:
-                        cur_bogus_idx = bb_idx
-                        found = True
-                        break
-                if not found:
-                    skip = True
+    while index_corpus > heads[offset]:
+        offset += 1
+    return index_corpus + offset
 
-            if _DEBUG_LOG:
-                print('[DEBUG-KEY] skip: {}; offset, idx, cur_bogus_idx: {}, {}, {}'.format(skip, offset, idx, cur_bogus_idx))
-                sys.stdout.flush()
+def id_system_output_to_corpus(index_system_data: int) -> int:
+    """Retourne la valeur de l'index de system_data shiftée pour être égale à la valeur de l'output du corpus
 
-            if not skip:
-                offset_idx = offset + idx
-                key = str(offset_idx) + '-' + str(cur_bogus_idx)
-                
-                # assert key in system_data, 'seq-id {} not found in system output data'.format(key)
-                cur_seq = system_data[key]['cur']
-                cur_seq = safe_clean(cur_seq)
+    Args:
+        index_system_data (int): valeur de l'index de la phrase dans l'output du system
 
-                if _CORPUS_SYSTEM_COMPARISON_LOG:
-                    print('[DEBUG] ANALYSIS corpus curr ({}): {}'.format(idx, source_sentence.raw_parcorfull_sentence))
-                    print('[DEBUG] ANALYSIS system curr ({}): {}'.format(idx, cur_seq))
-                    print('[DEBUG] **********')
-                    sys.stdout.flush()
-                print(f"[DEBUG] source sentence: {source_sentence}")
-                er_vals = edit_distance.str_edit_distance(source_sentence.raw_parcorfull_sentence, cur_seq)
-                c2s_wer += er_vals
-                er_cur_seq = clean_for_passER(cur_seq)
-                er_pass = edit_distance.str_edit_distance(source_sentence.raw_parcorfull_sentence, er_cur_seq)
-                wer = er_pass.get_wer()
-                if wer >= wer_threshold:
-                    sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.3f}) between reference and system current sentence @{}\n'.format(wer, key))
-                    sys.stderr.write(' *   Ref: {}\n'.format(source_sentence.raw_parcorfull_sentence))
-                    sys.stderr.write(' *   Sys: {}\n'.format(er_cur_seq))
-                    sys.exit(0)
-                a = er_vals.alignements
-                alignments.append( a )
+    Returns:
+        int: valeur de l'index correspondant dans le corpus
+    """
+    # Tête de document où le shift augmente
+    heads = [187, 337, 460, 694, 797, 1040, 1275, 1428, 1619, 1765, 1793, 1826, 1876, 1924, 1947, 1974, 2006, 2027, 2063, 2095, 2129, 2145, 2176, 2215, 2239, 2271, 2289, 2308]    
+    offset = 0
+    while index_system_data > heads[offset]:
+        offset += 1
+    return index_system_data - offset
 
-                if _DEBUG_LOG:
-                    print('[DEBUG] alignments: {}'.format(len(alignments)))
-                    print('[DEBUG] ANALYSIS current alignment: {}'.format(a))
-                    print('[DEBUG] ***************')
-                    sys.stdout.flush()
+def analyse_current_to_context(corpus_contexte_sentence: SentenceAlignement, 
+                               system_context_sequence: str, 
+                               system_current_sequence, 
+                               coreference_system_current_sequence, 
+                               key_system_data, 
+                               att, 
+                               wer_corpus2system, 
+                               token_identity_level):
+    """Analyse les coréférences entre la phrase courante et la phrase de contexte. 
 
-                if True: #idx >= 3:
-                    sys_cur_corefs = find_coref_matches(source_sentence, cur_seq, a)
-                    for scc in sys_cur_corefs:
-                        token_identity_level.append( int(scc[2]) )
-                    if not _FULL_MATRICE:
-                        for ctx_idx in range(1, ctx_size+1):
-                            key = str(idx) + '-' + str(ctx_idx)
-                            #assert key in system_data, 'seq-id {} not defined in system output data'.format(key)
+    Args:
+        corpus_contexte_sentence (SentenceAlignement): SentenceAlignement de la phrase de corpus
+        system_context_sequence (str): chaîne de caractère de la phrase de contexte de l'output du système
+        cur_system_current_sequence (str): chaîne de caractère de la phrase courante de l'output du système
+        coreference_system_current_sequence (List[CoreferenceMatch]): Liste de CoreferenceMatch
+        key_system_data (str): clé du dictionnaire system_data
+        att (List[List[float]]): matrice d'attention
+        wer_corpus2system (EditDistance): EditDistance sur l'entiérété de l'output du système
+        token_identity_level
 
-                            ctx_seq_flag = system_data[key]['ctx'] != '<eos>' if key in system_data else False
+    Returns:
+        tuple: paire dont 
+            0: le premier élément est la clé de la matrice d'attention
+            1: (tuple) dont 
+                0: system current sentence
+                1: system context sentence
+                2: metrics : List of éléments:
+                    0: (booléen) default to True
+                    1: link_score >= all_lines_max_weight
+                    2: sum(all_weights) > 0.0
+                    3: link_score
+    """
+    er_vals = edit_distance.str_edit_distance(corpus_contexte_sentence.raw_parcorfull_sentence, system_context_sequence)
+    wer_corpus2system += er_vals
+    er_ctx_seq = clean_for_passER(system_context_sequence)
+    er_pass = edit_distance.str_edit_distance(corpus_contexte_sentence.raw_parcorfull_sentence, er_ctx_seq)
+    if er_pass.get_wer() >= wer_threshold:
+        sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.2f}; Ins: {}, Del: {}, Sub: {}) between reference and system context sentence @{}\n'.format(er_pass.get_wer(), er_vals.nombre_erreur_insertion, er_vals.nombre_erreur_suppression, er_vals.nombre_erreur_substitution, key_system_data))
+        sys.stderr.write(' *   Ref: {}\n'.format(corpus_contexte_sentence.raw_parcorfull_sentence))
+        sys.stderr.write(' *   Sys: {}\n'.format(system_context_sequence))
+        sys.exit(0)
 
-                            if _DEBUG_LOG:
-                                print('[DEBUG-KEY] ctx key defined: {}; ctx-seq-flag: {}; key: {} (offset_idx, ctx_idx: {}, {})'.format(key in system_data, ctx_seq_flag, key, offset_idx, ctx_idx))
-                                sys.stdout.flush()
-
-                            if key in system_data and ctx_seq_flag:
-                                ctx_s = align_data[idx-ctx_idx]
-                                ctx_seq = system_data[key]['ctx']
-                                ctx_seq = safe_clean(ctx_seq)
-                                if ctx_seq != '<end>':  # NOTE: in multi-enc system output, when the current sentence is at the begin of a document, context sentences are just '<end>' tokens
-                                    analysis_results.append(something(ctx_s, ctx_seq, cur_seq, sys_cur_corefs, key, system_data[key]['att'], c2s_wer) )
-                    if _FULL_MATRICE : # Si on étudie l'attention crt x [k3,k2,k1] alors on doit fusionner les éléments
-                        ctx_seq = system_data[key]['ctx']
-                        ctx_seq = safe_clean(ctx_seq)
-                        if ctx_seq != '<end>':
-                            context_sentence = SentenceAlignement(identifiant=None, 
-                                                                  system_input_sentence='',
-                                                                  raw_parcorfull_sentence='', 
-                                                                  annotated_system_input_sentence='',
-                                                                  unique_token_identifiers_sequence=[],
-                                                                  tokenized_parcorfull_sentence=[])
-                            full_context_sentence = SentenceAlignement(identifiant=None, 
-                                                                  system_input_sentence='',
-                                                                  raw_parcorfull_sentence='', 
-                                                                  annotated_system_input_sentence='',
-                                                                  unique_token_identifiers_sequence=[],
-                                                                  tokenized_parcorfull_sentence=[])
-                            # ctx_s = ['', '', [], [], ''] 
-                            # full_ctx_s = ['', '', [], [], ''] 
-                            system_full_ctx_seq = "" 
-                            system_data_key = ""
-
-                            limit = False
-                            for ctx_idx in range(ctx_size + 1, 0, -1):
-                                key = str(idx + offset) + '-' + str(ctx_idx)
-                                if not limit:
-                                    if (idx-ctx_idx >= 0):
-                                        full_context_sentence += align_data[idx+offset-ctx_idx]
-
-                                if key in system_data and \
-                                    (system_data[key]['ctx'] != '<eos>'): # or system_data[key]['ctx'] != '<end>') : 
-                                    # Si le fichier existe pour crt x k alors
-                                    system_full_ctx_seq = safe_clean(system_data[key]['ctx']) 
-                                    # On vérifie que le ctx n'est pas vide (<=> vérifier si != '<eos>)
-                                    # On concatene les phrases en ajoutant un caractère espace entre
-                                    limit = True
-                                    system_data_key = key
-                                    # On concatene les matrices d'attentions sur les colonnes 
-                                    # full_att = torch.cat([torch.Tensor(system_data[key]['att']), full_att], dim = 1)
-                                    # On concatène tout les éléments de la structure ctx_s
-                                    
-                            ic(context_sentence)
-                            if system_full_ctx_seq.split() != [] and len(full_context_sentence.system_input_sentence) > 0:
-                                idx_old = idx
-                                analysis_results.append(something(full_context_sentence, 
-                                                                  system_full_ctx_seq,
-                                                                  cur_seq, 
-                                                                  sys_cur_corefs,
-                                                                  key, 
-                                                                  system_data[system_data_key]['att'], 
-                                                                  c2s_wer))
-    if _DEBUG_LOG and c2s_wer.taille_tenseur_reference > 0:
-        print('[DEBUG-KEY] corpus vs. system sentences WER: {:.2f}'.format( c2s_wer.get_wer() ))
+    if _CORPUS_SYSTEM_COMPARISON_LOG:
+        print(' * [DEBUG] ANALYSIS@{} ctx-gold: {}'.format(key_system_data, corpus_contexte_sentence.raw_parcorfull_sentence))
+        print(' * [DEBUG] ANALYSIS@{} ctx-syst: {}'.format(key_system_data, system_context_sequence))
+        print(' * [DEBUG] **********')
+        if _DEBUG_LOG:
+            print(' * [DEBUG] ANALYSIS@{} context alignment: {}'.format(key_system_data, er_vals.alignements))
         sys.stdout.flush()
 
+    coreference_system_context_sequence = find_coref_matches(corpus_contexte_sentence, system_context_sequence, er_vals.alignements)
+    for coreference_link in coreference_system_context_sequence:
+        token_identity_level.append( int(coreference_link.is_aligned_token_identical_in_gold_sentence) )
+    # coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, system_data[key]['att'])
+    coref_res = find_coref_links(system_current_sequence, coreference_system_current_sequence, system_context_sequence, coreference_system_context_sequence, att)
+    if _DEBUG : 
+        ic(coref_res)
+    return (key_system_data, coref_res)
+
+
+def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement], system_data: List[SystemOutput], seq_ids=None):
+    """Analyse les données du modèle grâce à l'annotation du corpus
+
+    Args:
+        align_data (List[SentenceAlignement]): SentenceAlignement entre la phrase de référence du corpus annotée en coréférence et 
+                                         la phrase provenant du système. 
+        system_data (List[SystemOutput]): Liste des output du system. Chaque output contient la phrase courante, 
+                                          de contexte et la matrice des poids d'attention.
+        seq_ids (List[int], optional): Not implemented. Permet de ne prendre en compte que certains ids. Defaults to None.
+
+    Returns:
+        tuple: (analysis_results, token_identity_level)
+    """
+    first_index = 2 if canmt_system == 'concat' else 1
+    wer_corpus2system = EditDistance(nombre_erreur_insertion=0, nombre_erreur_suppression=0, nombre_erreur_substitution=0, taille_tenseur_reference=0, alignements=[])
+    alignments = []
+    token_identity_level = []
+    analysis_results = []
+
+    # On parcours les éléments que l'on a
+    for idx, key_system_data in enumerate(system_data):
+        idx_system_data, numero_context = [int(value) for value in key_system_data.split('-')]
+        if idx_system_data > len(align_data):
+            ic(f"[DEBUG] len error. idx_system_data > len(align_data). {idx_system_data} vs. {len(align_data)}")
+        system_data_current_sequence = safe_clean(system_data[key_system_data].current_sentence)
+        corpus_current_sequence = align_data[id_system_output_to_corpus(idx_system_data)]
+
+        if _CORPUS_SYSTEM_COMPARISON_LOG:
+            print('[DEBUG] ANALYSIS corpus curr ({}): {}'.format(idx, corpus_current_sequence.raw_parcorfull_sentence))
+            print('[DEBUG] ANALYSIS system curr ({}): {}'.format(key_system_data, system_data_current_sequence))
+            print('[DEBUG] **********')
+            sys.stdout.flush()
+
+        error_value = edit_distance.str_edit_distance(corpus_current_sequence.raw_parcorfull_sentence, system_data_current_sequence)
+        error_pass = edit_distance.str_edit_distance(corpus_current_sequence.raw_parcorfull_sentence, clean_for_passER(system_data_current_sequence))
+        if error_pass.get_wer() >= wer_threshold:
+            sys.stderr.write(' * FATAL ERROR: found too large divergence (WER: {:.3f}) between reference and system current sentence @{}\n'.format(error_pass.get_wer(), key_system_data))
+            sys.stderr.write(' *   Ref: {}\n'.format(corpus_current_sequence.raw_parcorfull_sentence))
+            sys.stderr.write(' *   Sys: {}\n'.format(clean_for_passER(system_data_current_sequence)))
+            sys.exit(0)
+        alignments.append(error_value.alignements)
+
+        if _DEBUG_LOG:
+            print('[DEBUG] alignments: {}'.format(len(alignments)))
+            print('[DEBUG] ANALYSIS current alignment: {}'.format(error_value.alignements))
+            print('[DEBUG] ***************')
+            sys.stdout.flush()
+
+        coreference_system_current_sequence = find_coref_matches(corpus_current_sequence, 
+                                                                 system_data_current_sequence, 
+                                                                 error_value.alignements)
+        for coreference_link in coreference_system_current_sequence:
+            token_identity_level.append(int(coreference_link.is_aligned_token_identical_in_gold_sentence))
+
+        if _FULL_MATRICE:
+            context_sequence = safe_clean(system_data[key_system_data].context_sentence)
+            
+            if context_sequence != "<end>":
+                full_context_sentence = SentenceAlignement(identifiant=None, 
+                                                           system_input_sentence='',
+                                                           raw_parcorfull_sentence='', 
+                                                           annotated_system_input_sentence='',
+                                                           unique_token_identifiers_sequence=[],
+                                                           tokenized_parcorfull_sentence=[])
+                # Par convention, dans le cas d'une _FULL_MATRICE, le numero de contexte est 
+                # le contexte le plus éloigné de la phrase courante
+                if _DEBUG :
+                    ic(f"k: {numero_context}")
+                for k in range(1, numero_context + 1):
+                    full_context_sentence = align_data[id_system_output_to_corpus(idx_system_data)-k] + full_context_sentence
+                if _DEBUG :
+                    ic(f"idx : {idx_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}")
+                    ic(f"idx : {key_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}-{k}")
+                    ic(f"full_context_sentence: {full_context_sentence.system_input_sentence}")
+                    ic(f"context_sequence: {context_sequence}")
+
+                analysis_results.append(analyse_current_to_context(full_context_sentence, 
+                                                  context_sequence,
+                                                  system_data_current_sequence, 
+                                                  coreference_system_current_sequence,
+                                                  key_system_data, 
+                                                  system_data[key_system_data].attention_matrice, 
+                                                  wer_corpus2system,
+                                                  token_identity_level))
     return analysis_results, token_identity_level
 
 def main(args):
@@ -1416,7 +1327,8 @@ def main(args):
     analyzed_hyp = system_src_data
     if eval_language == 'target':
         analyzed_ref = classe_aligned_tgt 
-    analysis_results, til = analyze_and_evaluate(analyzed_ref, analyzed_hyp, ctx_size, seq_ids=subset_ids)
+    analysis_results, til = analyze_and_evaluate_from_system_data(analyzed_ref, analyzed_hyp)
+
     if _VERBOSE:
         for source_sentence, target_sentence in zip(classe_aligned_src, classe_aligned_tgt):
             print('Src -->: {}'.format(source_sentence.raw_parcorfull_sentence))

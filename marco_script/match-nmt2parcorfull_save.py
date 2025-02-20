@@ -694,6 +694,7 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
     s_tt = sys_s.split()
     c_tt = sys_c.split()
     annot_info = []
+    # Aberration metrics définit ici et ligne 826 avec des significations différentes
     metrics = [False, False, 0.0]   # 1. Is max weight in the antecedent (any token) ?; 2. Is antecedent att weight > 0.0 (any token) ?; 3. Att weight to the antecedent
 
     def compute_link_score( weights, avg=False):
@@ -840,7 +841,7 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
                         for j in ctx_mnt:
                             all_weights.append( att[i][j] )
                     link_score = compute_link_score( all_weights, avg=use_avg_score)
-                    if link_score >= all_lines_max_weight:
+                    if link_score >= all_lines_max_weight and sum(all_weights) > 0.0:
                         metrics[-1][1] = True
                     metrics[-1][2] = sum(all_weights) > 0.0
                     metrics[-1][3] = link_score
