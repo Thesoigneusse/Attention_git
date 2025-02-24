@@ -1112,8 +1112,8 @@ def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement],
                                                                                   str, 
                                                                                   List[WeightAnalysisMetric]
                                                                                   ]
-                                                                            ],
-                                                                      List[int]]]:
+                                                                            ]],
+                                                                 List[int]]:
     """Analyse les données du modèle grâce à l'annotation du corpus
 
     Args:
