@@ -17,5 +17,6 @@ marco_script/Classes/CorpusSentence.py
 marco_script/test.ipynb
 test.json
 output_debug.txt
-Output/debug_metrics.results
+Output/
 Tests/disco_src_data.json
+git*

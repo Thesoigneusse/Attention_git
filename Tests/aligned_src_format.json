@@ -1,0 +1,29 @@
+[
+    {
+        "__SentenceAlignement__": {
+            "identifiant": 0, 
+            "system_input_sentence": "\"Even in purely non-religious terms, homosexuality represents a misuse of the sexual faculty.", 
+            "raw_parcorfull_sentence": "\" Even in purely non-religious terms , homosexuality represents a misuse of the sexual faculty .", 
+            "annotated_system_input_sentence": [
+                {
+                    "index_reference": 0, 
+                    "index_hypothese": null, 
+                    "alignement_type": "del"
+                }, {
+                    "index_reference": 1, 
+                    "index_hypothese": 0, 
+                    "alignement_type": "sub"
+                }, {
+                    "index_reference": 2, 
+                    "index_hypothese": 1, 
+                    "alignement_type": "match"
+                }
+                
+            ], 
+            "unique_token_identifiers_sequence": [
+                "000_1756-word_1", "000_1756-word_2", "000_1756-word_3", "000_1756-word_4", "000_1756-word_5", "000_1756-word_6", "000_1756-word_7", "000_1756-word_8", "000_1756-word_9", "000_1756-word_10", "000_1756-word_11", "000_1756-word_12", "000_1756-word_13", "000_1756-word_14", "000_1756-word_15", "000_1756-word_16"
+            ], 
+            "tokenized_parcorfull_sentence": "#[``]#-set_219 #[Even]#-set_219 #[in]#-set_219 #[purely]#-set_219 #[non-religious]#-set_219 #[terms]#-set_219 #[,]#-set_219 #[homosexuality]#-set_219 #[represents]#-set_219 #[a]#-set_219 #[misuse]#-set_219 #[of]#-set_219 #[the]#-set_219 #[sexual]#-set_219 #[faculty]#-set_219 #[.]#-set_219"
+        }
+    }
+]
