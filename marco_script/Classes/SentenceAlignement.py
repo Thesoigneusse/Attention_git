@@ -7,7 +7,6 @@ sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git/marco_script')
 from Classes.WordAlignement import WordAlignement
 
 from typing import TYPE_CHECKING
-from icecream import ic
 
 
 @dataclass
@@ -58,8 +57,6 @@ class SentenceAlignement():
             [1, 2]
         """
         if isinstance(other, SentenceAlignement):
-            ic(self)
-            ic(other)
             return SentenceAlignement(identifiant= self.identifiant if self.identifiant is not None else other.identifiant,
                                       system_input_sentence= self.system_input_sentence + other.system_input_sentence,
                                       raw_parcorfull_sentence= self.raw_parcorfull_sentence + other.raw_parcorfull_sentence,
