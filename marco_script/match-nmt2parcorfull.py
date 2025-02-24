@@ -2,7 +2,6 @@ import os
 import sys
 import re
 import json
-from icecream import ic
 from typing import List
 from typing import Tuple
 
@@ -1101,7 +1100,7 @@ def analyse_current_to_context(corpus_contexte_sentence: SentenceAlignement,
         token_identity_level.append( int(coreference_link.is_aligned_token_identical_in_gold_sentence) )
     coref_res = find_coref_links(system_current_sequence, coreference_system_current_sequence, system_context_sequence, coreference_system_context_sequence, att)
     if _DEBUG : 
-        ic(coref_res)
+        print(coref_res)
     return (key_system_data, coref_res)
 
 
@@ -1136,7 +1135,7 @@ def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement],
     for idx, key_system_data in enumerate(system_data):
         idx_system_data, numero_context = [int(value) for value in key_system_data.split('-')]
         if idx_system_data > len(align_data):
-            ic(f"[DEBUG] len error. idx_system_data > len(align_data). {idx_system_data} vs. {len(align_data)}")
+            print(f"[DEBUG] len error. idx_system_data > len(align_data). {idx_system_data} vs. {len(align_data)}")
         system_data_current_sequence = safe_clean(system_data[key_system_data].current_sentence)
         corpus_current_sequence = align_data[id_system_output_to_corpus(idx_system_data)]
 
@@ -1180,14 +1179,14 @@ def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement],
                 # Par convention, dans le cas d'une _FULL_MATRICE, le numero de contexte est 
                 # le contexte le plus éloigné de la phrase courante
                 if _DEBUG :
-                    ic(f"k: {numero_context}")
+                    print(f"k: {numero_context}")
                 for k in range(1, numero_context + 1):
                     full_context_sentence = align_data[id_system_output_to_corpus(idx_system_data)-k] + full_context_sentence
                 if _DEBUG :
-                    ic(f"idx : {idx_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}")
-                    ic(f"idx : {key_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}-{k}")
-                    ic(f"full_context_sentence: {full_context_sentence.system_input_sentence}")
-                    ic(f"context_sequence: {context_sequence}")
+                    print(f"idx : {idx_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}")
+                    print(f"idx : {key_system_data} vs. system_corpus_idx: {id_system_output_to_corpus(idx_system_data)}-{k}")
+                    print(f"full_context_sentence: {full_context_sentence.system_input_sentence}")
+                    print(f"context_sequence: {context_sequence}")
 
                 analysis_results.append(analyse_current_to_context(full_context_sentence, 
                                                   context_sequence,
@@ -1354,7 +1353,7 @@ def main(args):
     # output_file = sys.argv[3] + '.results'
     f = open(output_file, 'w', encoding='utf-8')
     metrics = [0, 0, 0, 0]
-    ic(analysis_results)
+    # print(analysis_results)
     for e in analysis_results:
         fid = e[0]
         res = e[1]
