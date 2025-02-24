@@ -1,5 +1,8 @@
 from dataclasses import dataclass, asdict
-from typing import Literal
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 import json
 
 # import sys
