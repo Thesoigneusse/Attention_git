@@ -4,6 +4,7 @@ import re
 import json
 from icecream import ic
 from typing import List
+from typing import Tuple
 
 import torch
 import argparse
@@ -29,7 +30,10 @@ _CORPUS_SYSTEM_COREF_MATCHES = False
 _CORPUS_SYSTEM_COMPARISON_LOG = False
 _MENTION_LOG = False
 _DEBUG_LOG = True
-_FULL_MATRICE = True
+
+# Par convention, dans le cas d'une _FULL_MATRICE, le numero de contexte est le contexte le plus éloigné de la phrase courante
+_FULL_MATRICE = True 
+
 _DEBUG = True
 _DEBUG_WER = False
 _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS = False # Permet de se restreindre à un subset de test
@@ -777,7 +781,7 @@ def find_coref_matches(src_sentence: SentenceAlignement, sys_sentence: str, alig
                 )
     return sys_coref_idxs
 
-def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
+def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att) -> Tuple[str, str, List[WeightAnalysisMetric]]:
     """_summary_
 
     Args:
@@ -960,10 +964,12 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
     for cur_cid in cur_mentions.keys():
         if cur_cid in ctx_mentions:
             for cur_mnt in cur_mentions[cur_cid]:   
-                # NOTE: from any mention with given set ID in current sentence, to any mention with given set ID in the context sentence.
+                # NOTE: from any mention with given set ID in current sentence, 
+                # to any mention with given set ID in the context sentence.
                 
                 for ctx_mnt in ctx_mentions[cur_cid]:
-                    # NOTE: a new metrics entry is added for each link from any mention in the current sentence to any mention in the context sentence
+                    # NOTE: a new metrics entry is added for each link from any mention 
+                    # in the current sentence to any mention in the context sentence
 
                     all_weights = []
                     all_lines_max_weight = 0.0
@@ -975,7 +981,7 @@ def find_coref_links(sys_s, s_corefs, sys_c, c_corefs, att):
                             all_weights.append( att[i][j] )
 
                     link_score = compute_link_score( all_weights, avg=use_avg_score)
-                    is_link_score_line_max= link_score >= all_lines_max_weight
+                    is_link_score_line_max= link_score >= all_lines_max_weight and sum(all_weights) > 0.0
                     is_sum_all_weight_superior_to_zero= sum(all_weights) > 0.0
 
                     metrics.append(WeightAnalysisMetric(link_score= link_score, 
@@ -1048,7 +1054,7 @@ def analyse_current_to_context(corpus_contexte_sentence: SentenceAlignement,
                                key_system_data, 
                                att, 
                                wer_corpus2system, 
-                               token_identity_level):
+                               token_identity_level) -> Tuple[str, Tuple[str, str, List[WeightAnalysisMetric]]]:
     """Analyse les coréférences entre la phrase courante et la phrase de contexte. 
 
     Args:
@@ -1067,8 +1073,7 @@ def analyse_current_to_context(corpus_contexte_sentence: SentenceAlignement,
             1: (tuple) dont 
                 0: system current sentence
                 1: system context sentence
-                2: metrics : List of éléments:
-                    0: (booléen) default to True
+                2: metrics : List of WeightAnalysisMetric contenant :
                     1: link_score >= all_lines_max_weight
                     2: sum(all_weights) > 0.0
                     3: link_score
@@ -1094,14 +1099,21 @@ def analyse_current_to_context(corpus_contexte_sentence: SentenceAlignement,
     coreference_system_context_sequence = find_coref_matches(corpus_contexte_sentence, system_context_sequence, er_vals.alignements)
     for coreference_link in coreference_system_context_sequence:
         token_identity_level.append( int(coreference_link.is_aligned_token_identical_in_gold_sentence) )
-    # coref_res = find_coref_links(cur_seq, sys_cur_corefs, ctx_seq, sys_ctx_corefs, system_data[key]['att'])
     coref_res = find_coref_links(system_current_sequence, coreference_system_current_sequence, system_context_sequence, coreference_system_context_sequence, att)
     if _DEBUG : 
         ic(coref_res)
     return (key_system_data, coref_res)
 
 
-def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement], system_data: List[SystemOutput], seq_ids=None):
+def analyze_and_evaluate_from_system_data(align_data: List[SentenceAlignement],
+                                          system_data: List[SystemOutput],
+                                          seq_ids=None) -> Tuple[List[Tuple[str, 
+                                                                            Tuple[str, 
+                                                                                  str, 
+                                                                                  List[WeightAnalysisMetric]
+                                                                                  ]
+                                                                            ],
+                                                                      List[int]]]:
     """Analyse les données du modèle grâce à l'annotation du corpus
 
     Args:
@@ -1347,17 +1359,17 @@ def main(args):
         fid = e[0]
         res = e[1]
         for m in res[2]:
-            metrics[0] += m[0]
-            metrics[1] += m[1]
-            metrics[2] += m[2]
-            metrics[3] += m[3]
+            # metrics[0] += m[0] booléen always set to True
+            metrics[1] += int(m.is_link_score_line_max)
+            metrics[2] += int(m.is_sum_all_weight_superior_to_zero)
+            metrics[3] += m.link_score
         f.write(fid + '\n')
         f.write('current: ' + res[0] + '\n')
         f.write('context: ' + res[1] + '\n')
         f.write(' -----\n')
     f.close()
 
-    if metrics[0] > 0:
+    if True : # metrics[0] > 0: # Booléen always set to True
         print(' ********** ')
         print(' Analysis results written in {}'.format(output_file))
         try:
@@ -1367,7 +1379,7 @@ def main(args):
         print(' -----')
         print(' * Evaluation:')
         print(' * Corpus-to-system mention token identity level: {:.2f}%'.format( (sum(til)/len(til))*100.0 if len(til) > 0 else 0.0))
-        num_ex = metrics[0]
+        num_ex = len(analysis_results)
         print(' * Max weight metric: {} / {} = {:.2f}'.format(metrics[1], num_ex, metrics[1] / num_ex *100.0))
         print(' * Non-zero weight metric: {} / {} = {:.2f}'.format(metrics[2], num_ex, metrics[2] / num_ex *100.0))
         print(' * Average weight metric: {} / {} = {:.4f}'.format(metrics[3], num_ex, metrics[3] / num_ex))
