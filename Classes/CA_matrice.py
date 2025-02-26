@@ -2,7 +2,7 @@
 from abc import abstractmethod
 from typing import List
 import torch
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from Classes.Snt import Snt
 # N : taille de la phrase courante
 # k : nombre de phrase de contexte

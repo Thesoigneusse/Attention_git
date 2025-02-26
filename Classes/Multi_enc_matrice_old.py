@@ -1,5 +1,5 @@
 import Classes.Snt as Snt
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from Classes.Sl_matrice import Sl_matrice
 from Utils import Utils
 from Utils import Utils_data

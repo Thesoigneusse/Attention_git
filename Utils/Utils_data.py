@@ -5,7 +5,7 @@ import copy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
     from Classes.Sl_matrice import Sl_matrice
 
 def lecture_data(absolute_file_path):
@@ -92,7 +92,7 @@ def lecture_multi_enc_objet(data):
     """
     # print(data.keys())
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
     from Classes.Sl_matrice import Sl_matrice
     # phrase courante
     crt = Snt(identifiant= int(data["id"]), tokens= data["crt"])

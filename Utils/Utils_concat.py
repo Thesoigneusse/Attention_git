@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
 # N : taille de la phrase courante
 # k : nombre de phrase de contexte
 # M_k : Taille de la phrase de contexte k
@@ -194,7 +194,7 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List['Snt']) -> List[Li
             [87., 88., 89.],
             [97., 98., 99.]])}]]
     """
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
 
     assert _matrice.size(dim=0) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim0 vs. snt len: {_matrice.size()} vs. {sum([len(snt) for snt in snts])}"
     assert _matrice.size(dim=1) == sum([len(snt) for snt in snts]), f"[DEBUG]Size error, matrice size dim1 vs. snt len: {_matrice.size()} vs. {sum([len(snt) for snt in snts])}"
@@ -222,7 +222,7 @@ def cut_matrix_into_sentences(_matrice: 'Matrice', snts: List['Snt']) -> List[Li
 
 def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str]):
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
     # Correction du token <eos> manquant
     # full_snt = Snt(identifiant= identifiant, tokens = full_snt.split())
     # ajoute_eos_tokens_src(snt= full_snt, src_segments_labels= ssl)
@@ -290,7 +290,7 @@ def pre_traitement_src(identifiant: int, matrices: List[List[torch.Tensor]], ful
 def pre_traitement_tgt(identifiant: int, matrices: List[List[torch.Tensor]], full_snt: List[str]) :
     from Utils import Utils_concat
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
     # snts = Snt(identifiant = identifiant, tokens = Utils_concat.ajoute_eos_tokens_tgt(full_snt.split(), tgt_segments_labels = ssl))
     snts_cutted  = Utils_concat.full_sentence_to_ctx_and_crt(full_snt)
     print(len(matrices))
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     import sys
     sys.path.append("/home/getalp/lopezfab/Bureau/Attention_git/")
     from Classes.Snt import Snt
-    from Classes.Matrice import Matrice
+    from Classes.Matrice_deprecated_2 import Matrice
     doctest.testmod()
     print(f"[DEBUG] Doctest clear")
 

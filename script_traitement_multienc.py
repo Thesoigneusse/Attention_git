@@ -1,7 +1,7 @@
 import Utils_data as ud
 import Utils
 import torch
-import Classes.Matrice as Matrice
+import Classes.Matrice_deprecated_2 as Matrice_deprecated_2
 import Classes.Sl_matrice as Sl_matrice
 from Classes.Snt import Snt
 
@@ -60,7 +60,7 @@ for id in range(2308):
 
                 # Pour chaque phrase de contexte, on récupère la moyenne des poids d'attention 
                 # de la phrase courante vers la phrase de contexte (doit être effectuée avant la normalisation )
-                mean_ctxs_heads.append(Matrice.Matrice(Utils.mean_matrices([ctxs_heads[k][head].matrice for head in range(len(ctxs_heads[k])) ])))
+                mean_ctxs_heads.append(Matrice_deprecated_2.Matrice(Utils.mean_matrices([ctxs_heads[k][head].matrice for head in range(len(ctxs_heads[k])) ])))
                 # mean_ctxs_heads[k].norm_tensor() # On peut normaliser la moyenne car on ne l'utilise pas dans la contextualisation
         if _SENTENCE_LEVEL or _FULL_MATRICE:
             for sl_head in range(len(sl_heads)):

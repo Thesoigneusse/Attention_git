@@ -3,7 +3,7 @@ import sys
 sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git')
 
 from Classes.Snt import Snt
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from typing import List
 
 class Sl_matrice(Matrice):

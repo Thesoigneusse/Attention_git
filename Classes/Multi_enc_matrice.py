@@ -2,7 +2,7 @@ import sys
 sys.path.append('/home/getalp/lopezfab/Bureau/Attention_git')
 import torch
 from Classes.Snt import Snt
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from Classes.CA_matrice import CA_matrice
 from Classes.Sl_matrice import Sl_matrice
 from typing import List

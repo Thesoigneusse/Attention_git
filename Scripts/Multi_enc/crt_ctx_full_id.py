@@ -6,7 +6,7 @@ from Utils import Utils_data as ud
 from Utils import Utils
 import torch
 with torch.no_grad():
-    import Classes.Matrice as Matrice
+    import Classes.Matrice_deprecated_2 as Matrice_deprecated_2
     import Classes.Sl_matrice as Sl_matrice
     from Classes.Multi_enc_matrice import Multi_enc_matrice
     from Utils import Utils_multi_enc

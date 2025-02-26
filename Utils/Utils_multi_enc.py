@@ -2,7 +2,7 @@ import torch
 from typing import List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-     from Classes.Matrice import Matrice
+     from Classes.Matrice_deprecated_2 import Matrice
      from Classes.Sl_matrice import Sl_matrice
      from Classes.Multi_enc_matrice import Multi_enc_matrice
      from Classes.Snt import Snt

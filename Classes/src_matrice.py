@@ -1,4 +1,4 @@
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from Classes.Snt import Snt
 from typing import List
 

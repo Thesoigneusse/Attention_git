@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from Classes.Matrice import Matrice
+from Classes.Matrice_deprecated_2 import Matrice
 from Classes.CA_matrice import CA_matrice
 from Classes.Snt import Snt
 from Utils import Utils_concat
