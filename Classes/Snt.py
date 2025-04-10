@@ -47,12 +47,6 @@ class Snt:
     def copy(self):
         from copy import copy
         return copy(self)
-        if isinstance(other, int) and other > 0:
-            from copy import copy
-            res = []
-            for i in range(other):
-                res.append(copy(self))
-            return res
 
     @property
     def tokens(self) -> List[str]:
