@@ -99,7 +99,7 @@ class BaseMatrice():
                            context_sentence=BaseSentence(identifiant=0, tokens= [str(j) for j in range(nb_col)]),
                            matrice= torch.Tensor([[i*nb_col+j for j in range(nb_col)] for i in range(nb_row)]))
 
-    def merge_bpe(strategy)
+    # def merge_bpe(strategy)
 
 def main():
     from icecream import ic

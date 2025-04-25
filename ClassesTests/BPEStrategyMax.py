@@ -1,5 +1,5 @@
 from BaseBpeStrategy import BaseBpeStrategy
-from BaseMatrice import BaseMatrice
+from ClassesTests.AttentionMatrice import BaseMatrice
 from typing import List 
 import torch
 
