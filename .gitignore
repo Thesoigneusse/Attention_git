@@ -20,3 +20,7 @@ output_debug.txt
 Output/
 Tests/disco_src_data.json
 git*
+Output/debug.results
+Test.ipynb
+Test.xml
+marco_script/Untitled-1.ipynb
