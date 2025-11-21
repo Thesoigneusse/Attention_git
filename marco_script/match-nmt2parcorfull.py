@@ -24,6 +24,24 @@ from Classes.WeightAnalysisMetric import WeightAnalysisMetric
 #tokenizer = AutoTokenizer.from_pretrained('dbmdz/bert-base-german-cased')
 #model = AutoModel.from_pretrained('dbmdz/bert-base-german-cased')
 
+# Exemple d'appel pour le modèle concat:
+# python3 ./marco_script/match-nmt2parcorfull.py \
+#    /home/getalp/lopezfab/Attention/k3/GOLD/test.en \
+#    /home/getalp/lopezfab/Attention/k3/GOLD/test.de \
+#    ./marco_script/list_filename_matrice/concat/full_matrice/list_chemin_1_3.txt \
+#    --output-file=./Output/debug_metrics.results \
+#    --canmt-system=concat \
+#    --pudb=False --local=False
+
+# Exemple d'appel pour le modèle multi_enc:
+# python3 ./marco_script/match-nmt2parcorfull.py \
+#    /home/getalp/lopezfab/Attention/k3/GOLD/test.en \
+#    /home/getalp/lopezfab/Attention/k3/GOLD/test.de \
+#    ./marco_script/list_filename_matrice/multi_enc/full_matrice/list_chemin_1_3.txt \
+#    --output-file=./Output/debug_metrics.results \
+#    --canmt-system=multienc \
+#    --pudb=False --local=False
+
 _VERBOSE = True
 _CORPUS_SYSTEM_COREF_MATCHES = False
 _CORPUS_SYSTEM_COMPARISON_LOG = False
@@ -72,7 +90,7 @@ _RELOAD_ALIGN_DATA = True if args.reload_align_data == 'True' else False
 
 
 
-def read_txt(filename):
+def read_txt(filename) -> List[str]:
 
     f = open(filename, encoding='utf-8')
     ll = f.readlines()
