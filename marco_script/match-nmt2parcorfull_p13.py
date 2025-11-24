@@ -9,7 +9,7 @@ import argparse
 import xml.etree.cElementTree as ET
 
 from pathlib import Path
-from typing import List, Dict, TypedDict, Any
+from typing import List, Dict, TypedDict, Any, Callable
 from Classes_p13 import edit_distance
 from Classes_p13.EditDistance import EditDistance
 from Classes_p13.SentenceAlignement import SentenceAlignement
@@ -19,6 +19,17 @@ from Classes_p13.SystemOutput import SystemOutput
 from Classes_p13.WeightAnalysisMetric import WeightAnalysisMetric
 from Classes_p13.Coref import Coref
 from Classes_p13.Data import Data
+import logging
+from logger_config import setup_logger
+from auto_trace import apply_tracing
+
+# Active le logger
+setup_logger()
+logger = logging.getLogger("TRACE")
+
+# Active le tracing automatique de TOUTES les fonctions de ce fichier
+apply_tracing(globals())
+
 # Activate the following python environment for importing the German BERT:
 # source /home/getalp/dinarelm/anaconda3/bin/activate ssl_wav2vec2_torch18
 
@@ -87,9 +98,9 @@ if eval_language == 'target':
 _LOCAL: bool = False if args.local == "False" else True
 _PATH: Path= Path("/home/getalp/lopezfab/lig/Attention_git") if _LOCAL else Path("/home/getalp/lopezfab/Attention_git")
 _DATAPATH: Path = _PATH / "marco_script/data"
+_PATH_TESTS = _PATH / 'Tests'
 _RELOAD_DATA: bool = True if args.reload_data == 'True' else False
 _RELOAD_ALIGN_DATA: bool = True if args.reload_align_data == 'True' else False
-
 
 
 def read_txt(filename: Path) -> List[str]:
@@ -104,9 +115,76 @@ def read_txt(filename: Path) -> List[str]:
         FileNotFoundError: If the specified file does not exist.
         IOError: If an error occurs while reading the file.    
     """
+    logger.info(f"Lecture du fichier: {filename}")
     with filename.open(mode="r", encoding='utf-8') as f: 
         lines = f.readlines()
-    return [line.strip() for line in lines]
+    list_lines = [line.strip() for line in lines]
+    logger.debug(f"Nombre de lignes: {len(list_lines)}")
+    return list_lines
+
+def reaf_head(filename:Path) -> List[int]:
+    """
+    Read head index from a text file and return them as a list of int.
+    Args:
+        filename (Path): The path to the text file to read.
+    Returns:
+        List[int]: A list of index, where each index is a document head from the corresponding txt file
+    Raises:
+        FileNotFoundError: If the specified file does not exist.
+        IOError: If an error occurs while reading the file.    
+    """
+
+    logger.info("Lecture des têtes du ")
+    src_heads = read_txt(filename)
+    list_head = [int(i) for i in src_heads]
+    logger.debug(f"Nombre de heads: {len(list_head)}")
+    logger.debug(f"Heads: {list_head}")
+    return [int(i) for i in src_heads]
+
+def load_or_extract(src_path: Path,
+        tgt_path: Path,
+        load_func: Callable,
+        serialize_func: Callable,
+        deserialize_func: Callable,
+        name: str,
+        reload_flag: bool = False
+    ):
+    """
+    Charge deux fichiers JSON si disponibles et non reload,
+    sinon lit depuis fichier texte et réécrit les JSON.
+
+    Retourne : (src_data, tgt_data)
+    """
+
+
+    if src_path.exists() and tgt_path.exists() and not reload_flag:
+        logger.info(f"Chargement de {name} depuis fichiers JSON")
+
+        with src_path.open("r", encoding="utf-8") as f:
+            src_data = deserialize_func(json.load(f))
+
+        with tgt_path.open("r", encoding="utf-8") as f:
+            tgt_data = deserialize_func(json.load(f))
+
+        print(f" * {name}_src_data loaded from {src_path}")
+        print(f" * {name}_tgt_data loaded from {tgt_path}")
+
+    else:
+        logger.info(f"Extraction de {name} depuis fichiers texte")
+
+        src_data, tgt_data = load_func()  # ex: read_news_data()
+
+        print(f" * {name}_src_data and {name}_tgt_data extracted from text files")
+
+        with src_path.open("w", encoding="utf-8") as f:
+            f.write(json.dumps(serialize_func(src_data)))
+        print(f" * {name}_src_data wrote to {src_path}")
+
+        with tgt_path.open("w", encoding="utf-8") as f:
+            f.write(json.dumps(serialize_func(tgt_data)))
+        print(f" * {name}_tgt_data wrote to {tgt_path}")
+
+    return src_data, tgt_data
 
 def pref2raw(prefix: str) -> str:
     """Permet de découper les noms des fichiers"""
@@ -907,3 +985,174 @@ def match_nmt2parcorfull(
             print(f"Matched: {sentence}")
 
     return matched_data
+
+
+
+def main(args):
+
+    from subset_ids import dimitra_ids, ctx_needed_concat_ids, ctx_needed_and_hard_coref_concat_ids, pos_att_concat_ids
+    import os
+    #subset_ids=dimitra_ids # NOTE: modify the value of this to constrain the sentence ID set (e.g. dimitra_ids corresponds to the subset identified by Dimitra Niaouri, M2 internship in 2022; see TAL 2024 journal paper).
+    if _CTX_NEEDED_AND_HARD_COREF_CONCAT_IDS:
+        subset_ids=ctx_needed_and_hard_coref_concat_ids
+    else:
+        subset_ids=None
+
+    ctx_size = 3
+    # Récupère une liste de chaque phrase des textes sources puis target
+    src = read_txt(args.corpus_source)
+    tgt = read_txt(args.corpus_target)
+
+    system_src_list: str = args.system_data
+    print(' ***')
+    print(' * Read {} source sentences'.format(len(src)))
+    print(' * Read {} target sentences'.format(len(tgt)))
+    print(' ***')
+    sys.stdout.flush()
+
+    # Check if the JSON files exist
+    disco_src_data_path: Path = _PATH_TESTS / 'disco_src_data.json'
+    disco_tgt_data_path: Path = _PATH_TESTS / 'disco_tgt_data.json'
+    news_src_data_path: Path = _PATH_TESTS / 'news_src_data.json'
+    news_tgt_data_path: Path = _PATH_TESTS / 'news_tgt_data.json'
+    aligned_src_data_path: Path = _PATH_TESTS / 'aligned_src_data.json'
+    aligned_tgt_data_path: Path = _PATH_TESTS / 'aligned_tgt_data.json'
+
+    # Récupère les données de disco
+    disco_src_data, disco_tgt_data = load_or_extract(
+        src_path=disco_src_data_path,
+        tgt_path=disco_tgt_data_path,
+        load_func=read_discomt_data,
+        serialize_func=convert_to_serializable,
+        deserialize_func=convert_from_serializable,
+        name="disco",
+        reload_flag=_RELOAD_DATA
+    )
+    # Récupère les données de news
+    news_src_data, news_tgt_data = load_or_extract(
+        src_path=news_src_data_path,
+        tgt_path=news_tgt_data_path,
+        load_func=read_news_data,
+        serialize_func=convert_to_serializable,
+        deserialize_func=convert_from_serializable,
+        name="news",
+        reload_flag=_RELOAD_DATA
+    )
+    
+    print(' * Read {} raw text for DiscoMT data'.format(len(disco_src_data['text'].keys())), flush=True)
+    print(' * Read {} raw text for news data'.format(len(news_src_data['text'].keys())), flush=True)
+
+    # aligned_src_data && aligned_tgt_data
+    if os.path.exists(aligned_src_data_path) and os.path.exists(aligned_tgt_data_path) and not _RELOAD_ALIGN_DATA:
+        print(' * Loading data from json file')
+        with open(aligned_src_data_path, 'r', encoding='utf-8') as f:
+            # classe_aligned_src = json.load(f)
+            classe_aligned_src = convert_from_serializable(json.load(f))
+        with open(aligned_tgt_data_path, 'r', encoding='utf-8') as f:
+            # classe_aligned_tgt = json.load(f)
+            classe_aligned_tgt = convert_from_serializable(json.load(f))
+        print(' * aligned_src_data loaded from json file', flush=True)
+        print(' * aligned_tgt_data loaded from json file', flush=True)
+    else:
+        print(' * Creating data from raw corpus')
+        # TODO: modify the returned struct to be a dictionary or a NamedTuple like the EncoderOut structure
+        aligned_src = match_nmt2parcorfull(src, disco_src_data, news_src_data)  
+        # src: liste phrase du corpus
+        # disco_src_data: {'text': ,
+        #                  'words': ,
+        #                  'coref': ,
+        #                  'words_in_coref': }
+        print(' *** source side aligned to ParCorFull2 ***', flush=True)
+        
+        classe_aligned_src = []
+
+        for index, src_sentence in enumerate(aligned_src):
+            classe_aligned_src.append(SentenceAlignement(identifiant=index,
+                                                         system_input_sentence=src_sentence[0],
+                                                         raw_parcorfull_sentence=src_sentence[1],
+                                                         unique_token_identifiers_sequence=src_sentence[2],
+                                                         annotated_system_input_sentence=src_sentence[4],
+                                                         tokenized_parcorfull_sentence=src_sentence[3]
+                                                         ))
+        with open(aligned_src_data_path, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(convert_to_serializable(classe_aligned_src)))
+
+        print(f" * écriture de aligned_src au format json au chemin: '{aligned_src_data_path}'")
+
+        classe_aligned_tgt = []
+        aligned_tgt = match_nmt2parcorfull(tgt, disco_tgt_data, news_tgt_data)
+        print(' *** target side aligned to ParCorFull2 ***', flush=True)
+
+        for index, tgt_sentence in enumerate(aligned_tgt):
+            classe_aligned_tgt.append(SentenceAlignement(identifiant= index,
+                                                         system_input_sentence= tgt_sentence[0],
+                                                         raw_parcorfull_sentence= tgt_sentence[1],
+                                                         unique_token_identifiers_sequence= tgt_sentence[2],
+                                                         annotated_system_input_sentence= tgt_sentence[4],
+                                                         tokenized_parcorfull_sentence= tgt_sentence[3]))
+        with open(aligned_tgt_data_path, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(convert_to_serializable(classe_aligned_tgt)))
+        print(f" * écriture de aligned_tgt au format json au chemin: '{aligned_tgt_data_path}'")
+    
+    assert len(classe_aligned_src) == len(classe_aligned_tgt)
+
+    print(' ***')
+    system_src_data = read_system_src_data( system_src_list, seq_ids=subset_ids )
+
+    print(' * Read {} system sentences'.format(len(system_src_data)), flush=True)
+
+    analyzed_ref = classe_aligned_src
+    analyzed_hyp = system_src_data
+    if eval_language == 'target':
+        analyzed_ref = classe_aligned_tgt 
+    analysis_results, til = analyze_and_evaluate_from_system_data(analyzed_ref, analyzed_hyp)
+
+    if _VERBOSE:
+        for source_sentence, target_sentence in zip(classe_aligned_src, classe_aligned_tgt):
+            print('Src -->: {}'.format(source_sentence.raw_parcorfull_sentence))
+            print(' +Coref: {}'.format(source_sentence.annotated_system_input_sentence))
+            print(' -----')
+            print('Tgt -->: {}'.format(target_sentence.raw_parcorfull_sentence))
+            print(' +Coref: {}'.format(target_sentence.annotated_system_input_sentence))
+            print(' ************************************************** ')
+        sys.stdout.flush()
+
+    # output_file = sys.argv[3] + '.results'
+    f = open(output_file, 'w', encoding='utf-8')
+    metrics = [0, 0, 0, 0]
+    # print(analysis_results)
+    for e in analysis_results:
+        fid = e[0]
+        res = e[1]
+        for m in res[2]:
+            # metrics[0] += m[0] booléen always set to True
+            metrics[1] += int(m.is_link_score_line_max)
+            metrics[2] += int(m.is_sum_all_weight_superior_to_zero)
+            metrics[3] += m.link_score
+        f.write(fid + '\n')
+        f.write('current: ' + res[0] + '\n')
+        f.write('context: ' + res[1] + '\n')
+        f.write(' -----\n')
+    f.close()
+
+    if True : # metrics[0] > 0: # Booléen always set to True
+        print(' ********** ')
+        print(' Analysis results written in {}'.format(output_file))
+        try:
+            print(f" * Analysis done on {args.system_data}")
+        except:
+            print(f"wrong argument for args.system_data")
+        print(' -----')
+        print(' * Evaluation:')
+        print(' * Corpus-to-system mention token identity level: {:.2f}%'.format( (sum(til)/len(til))*100.0 if len(til) > 0 else 0.0))
+        num_ex = len(analysis_results)
+        print(' * Max weight metric: {} / {} = {:.2f}'.format(metrics[1], num_ex, metrics[1] / num_ex *100.0))
+        print(' * Non-zero weight metric: {} / {} = {:.2f}'.format(metrics[2], num_ex, metrics[2] / num_ex *100.0))
+        print(' * Average weight metric: {} / {} = {:.4f}'.format(metrics[3], num_ex, metrics[3] / num_ex))
+        print(' **********')
+    else:
+        print(' *** NO MATCH !!!')
+        print(f'{metrics}')
+
+main(args)
+

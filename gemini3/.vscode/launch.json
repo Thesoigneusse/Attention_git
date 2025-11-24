@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug Main Gemini",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}", 
+            "args": [
+                "--corpus-source", "${userHome}/Attention/k3/GOLD/test.en",
+                "--corpus-target", "${userHome}/Attention/k3/GOLD/test.de",
+                "--system-data", "${userHome}/Attention_git/marco_script/list_filename_matrice/concat/cutted_matrice_corrected/list_chemin.txt",
+                "--parcor-path", "${userHome}/Attention_git/marco_script/data/ParCorFull2/parcor-full/corpus",
+                "--log-file", "${userHome}/Attention_git/gemini3/Output/Debugger.debug",
+                "--verbose"
+            ]
+        }
+    ]
+}
